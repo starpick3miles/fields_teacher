@@ -132,5 +132,24 @@ var TEACHERS=[
       {"id": "f3", "name": "초3-②G13(금3)", "days": [5], "time": "15:00", "roster": ["김도원3", "김하운", "박시온3", "이아윤2", "조이안", "최주원B", "홍라희"], "log": {"code": "초3-②G13", "slot": "금3", "hours": "3시간"}, "plan": ["2A5R 1호 활동2 중간 12-20\n중학도형 1권 ACT 1-3", "2A5R 1호 활동3 끝 30\n중학도형 1권 ACT 4-6", "2A5R 2호 활동1 중간 52\n중학도형 1권 ACT 7-9", "2A5R 2호 활동3 중간 62\n중학도형 1권 ACT 10-12"]},
       {"id": "f6", "name": "초3-②H13(금6)", "days": [5], "time": "18:00", "roster": ["강리원", "김태욱", "배도영", "손연준", "이나연", "이예준6"], "log": {"code": "초3-②H13", "slot": "금6", "hours": "3시간"}, "plan": ["2G5P 1호 활동1 끝 6-12 / 2G4P TEST\n더클셈 12권 5주차 70-81", "2G5P 1호 활동2 끝 22\n더클셈 12권 5주차 리뷰 82-84", "2G5P 1호 끝 30\n더클셈 12권 6주차 86-97", "2G5P 2호 활동2 중간 49\n더클셈 12권 6주차 리뷰 98-100\n(12월 1주차 기적의 중학도형 1권 공지)"]}
     ],
-    extraEnroll:[], realAtt:{}, partnerAtt:{}, expected:{}, planWeeks:["2026-11-02","2026-11-09","2026-11-16","2026-11-23"] }
+    extraEnroll:[], realAtt:{}, partnerAtt:{}, expected:{}, planWeeks:["2026-11-02","2026-11-09","2026-11-16","2026-11-23"] },
+  { id:"jge", name:"정고은", defaults:{seating:true,hw:"one"}, sampleGb:false,
+    // 정고은 (2관, all ② classes): rosters from her student list (반명 / 학생명 / 담임, 71 rows, Jay 2026-11-13); school names left out.
+    // Days and times read off the published app (v15) on 2026-11-13: her day of each 2-day class is 월 (초4-②E2-2, 초3-②E1-8),
+    // 화 (초2-②E2-5) and 목 (초2-②E1-7). Roles: 초4-②E2-2 = B (엄지은 has 금 as A) and 초3-②E1-8 = A (서지완 has 금 as B), from the
+    // partners' entries above. 초2-②E2-5 (with 신혜정) and 초2-②E1-7 (with 오혜진): role unknown, so no tag and no A/B in the log code.
+    // No 진도표 plan and no attendance history yet. Class ids follow the day+slot convention; the published app's ids were not readable.
+    classes:[
+      {"id": "m3", "name": "초4-②E2-2(월금3)", "days": [1], "time": "15:00", "role": "B", "sub": true, "partnerDays": [5], "partner": "엄지은", "roster": ["김윤아", "윤재이", "이도현4", "이예지2", "홍시우"], "log": {"code": "초4-②E2-2B", "slot": "월3", "hours": "3시간"}},
+      {"id": "m6", "name": "초3-②E1-8(월금6)", "days": [1], "time": "18:00", "role": "A", "partnerDays": [5], "partner": "서지완", "roster": ["김이준2", "이민준", "이재용", "허이안"], "log": {"code": "초3-②E1-8A", "slot": "월6", "hours": "3시간"}},
+      {"id": "t3", "name": "초2-②E2-5(화목3)", "days": [2], "time": "15:00", "partnerDays": [4], "partner": "신혜정", "roster": ["고윤", "김서윤", "김지유", "박채은", "서주호", "유서원", "정시우3", "정유진2", "최윤지"], "log": {"code": "초2-②E2-5", "slot": "화3", "hours": "3시간"}},
+      {"id": "t6", "name": "초1-②H5(화6)", "days": [2], "time": "18:00", "roster": ["공은재", "김로은", "김아율", "윤우주", "차서연"], "log": {"code": "초1-②H5", "slot": "화6", "hours": "3시간"}},
+      {"id": "w3", "name": "초4-②G2(수3)", "days": [3], "time": "15:00", "roster": ["강주안", "김민지", "김효림", "박준하", "신수호", "오시연", "오지유", "이민형"], "log": {"code": "초4-②G2", "slot": "수3", "hours": "3시간"}},
+      {"id": "w6", "name": "초1-②G15(수6)", "days": [3], "time": "18:00", "roster": ["강주완", "김지수", "심미서", "안우진", "이나윤", "이다율", "전아인", "진호연", "하로아", "하루아"], "log": {"code": "초1-②G15", "slot": "수6", "hours": "3시간"}},
+      {"id": "h4", "name": "유7-②H7(목4)", "days": [4], "time": "16:00", "roster": ["노건우", "안현승", "이시아", "정민재B", "정민준C", "정진우B", "차강우"], "log": {"code": "유7-②H7", "slot": "목4", "hours": "2시간"}},
+      {"id": "h6", "name": "초2-②E1-7(화목6)", "days": [4], "time": "18:00", "partnerDays": [2], "partner": "오혜진", "roster": ["권태준", "김수하", "김준우2", "방율", "선소윤", "이하온", "정시윤", "조윤우", "차유호", "한서윤", "한재이"], "log": {"code": "초2-②E1-7", "slot": "목6", "hours": "3시간"}},
+      {"id": "f3", "name": "초4-②G5(금3)", "days": [5], "time": "15:00", "roster": ["강민재", "김서율2", "문예서", "신시아"], "log": {"code": "초4-②G5", "slot": "금3", "hours": "3시간"}},
+      {"id": "f6", "name": "유7-②G11(금6)", "days": [5], "time": "18:00", "roster": ["김도윤C", "김지아3", "도윤우", "소하진", "양태희", "오나은", "우준원", "최준서"], "log": {"code": "유7-②G11", "slot": "금6", "hours": "2시간"}}
+    ],
+    extraEnroll:[], realAtt:{}, partnerAtt:{}, expected:{}, planWeeks:[] }
 ];

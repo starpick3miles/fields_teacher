@@ -3,7 +3,9 @@
    (i18n → model → teachers → data → views → excel → app). Code that runs at load may only use earlier files. */
 
 /* ---------- actions (pure-ish rules) ---------- */
-var CYCLE={none:"online",online:"late",present:"late",late:"absent",absent:"none"};
+// Name-card tap cycle, same as the published app (v15): 미체크 → 등원 → 온라인 → 지각 → 결석 → 미체크. No double tap any more:
+// 등원 is the first tap, and a double-tap shortcut would swallow every second tap of a fast cycle.
+var CYCLE={none:"present",present:"online",online:"late",late:"absent",absent:"none"};
 function setAtt(sid,st,note){
   var k=akey(state.date,state.classId,sid), prev=db.attendance[k]||{};
   var n = note!=null ? note : (prev.note||"");
@@ -18,8 +20,6 @@ function startGb(){
   db.gbQuestions[qkey(id,1)]={phase:"first"};
   state.sessionId=id; state.q=1; state.view="gb"; persist();
 }
-var lastTap={sid:null,t:0};
-function isDouble(sid){ var now=Date.now(), d=(lastTap.sid===sid && now-lastTap.t<DOUBLE_MS); lastTap = d ? {sid:null,t:0} : {sid:sid,t:now}; return d; }
 var GB_CYCLE={"":"◎","◎":"O","O":"△","△":"X","X":""};
 function gbTap(sid){
   var s=db.gbSessions[state.sessionId], q=state.q, ph=db.gbQuestions[qkey(s.id,q)].phase;
@@ -27,7 +27,7 @@ function gbTap(sid){
   var k=mkey(s.id,q,sid), m=db.gbMarks[k], mk=(m&&m.mark)||"", cm=m?m.comment:"";
   var next = mk in GB_CYCLE ? GB_CYCLE[mk] : "";
   if (!next && !cm) delete db.gbMarks[k];
-  else db.gbMarks[k]={mark:next||null,phase:"first",comment:cm,overridden:false};
+  else { db.gbMarks[k]={mark:next||null,phase:"first",comment:cm,overridden:false}; if (next) db.gbMarks[k].at=(mk&&m.at)||Date.now(); }   // at: first marked on this question (kept while cycling; cleared with 미표시) → tie-break
   return true;
 }
 function qHasMarks(s,q){ var pre=s.id+"_"+q+"_"; return Object.keys(db.gbMarks).some(function(k){ var m=db.gbMarks[k]; return k.indexOf(pre)===0 && (m.mark||m.comment); }); }
@@ -68,12 +68,12 @@ app.addEventListener("click",function(ev){
     case "shift": {
       var dir=+el.getAttribute("data-n"), sc=state.view==="class"?classById(state.classId):null;
       var nd=sc ? stepLesson(sc,state.date,dir) : addDays(state.date,dir);   // class page: jump to the class's prev/next lesson
-      if (nd){ state.date=nd; state.sheet=null; render(); }
+      if (nd){ state.date=nd; state.sheet=null; state.seatSel=null; render(); }
       break;
     }
-    case "setDate": state.date=el.getAttribute("data-date"); render(); break;
-    case "goToday": state.date=todayIso(); render(); break;
-    case "openClass": state.classId=el.getAttribute("data-cid"); state.view="class"; render(); window.scrollTo(0,0); break;
+    case "setDate": state.date=el.getAttribute("data-date"); state.seatSel=null; render(); break;
+    case "goToday": state.date=todayIso(); state.seatSel=null; render(); break;
+    case "openClass": state.classId=el.getAttribute("data-cid"); state.view="class"; state.seatSel=null; render(); window.scrollTo(0,0); break;
     case "hw": { var hs=el.getAttribute("data-sid"); hwSet(state.date,state.classId,hs,!hwGet(state.date,state.classId,hs).h); save(); render(); break; }
     case "hwK": { var ks=el.getAttribute("data-sid"), kk=el.getAttribute("data-k"), kx=hwGet(state.date,state.classId,ks), np=kx.p, nr=kx.r; if (kk==="p") np=!np; else nr=!nr; hwWrite(state.date,state.classId,ks,np,nr); save(); render(); break; }
     case "hwSheetK": { var ta6=document.getElementById("hwNoteInput"); if (ta6) state.sheet.note=ta6.value; var k6=el.getAttribute("data-k"); state.sheet[k6]=!state.sheet[k6]; render(); break; }
@@ -86,7 +86,10 @@ app.addEventListener("click",function(ev){
       var allOn=live.length>0 && live.every(function(s){ return hwGet(state.date,state.classId,s.id).done; });
       live.forEach(function(s){ hwSet(state.date,state.classId,s.id,!allOn); }); save(); render(); break; }
     case "expConfirm": { rosterOf(db,state.classId,state.date).forEach(function(s){ if (isExpected(state.date,state.classId,s.id)) setAtt(s.id,attStatus(state.date,state.classId,s.id)); }); save(t("expDone")); render(); break; }
-    case "cycle": { var sid=el.getAttribute("data-sid"); if (isDouble(sid)) setAtt(sid,"present"); else setAtt(sid,CYCLE[attStatus(state.date,state.classId,sid)]); save(); render(); break; }
+    case "cycle": { var sid=el.getAttribute("data-sid"); setAtt(sid,CYCLE[attStatus(state.date,state.classId,sid)]); save(); render(); break; }
+    case "attAll": {   // 전부 등원: only 미체크 students; 온라인 / 지각 / 결석 / 예정 stay as they are
+      var nAll=0; rosterOf(db,state.classId,state.date).forEach(function(s0){ if (attStatus(state.date,state.classId,s0.id)==="none"){ setAtt(s0.id,"present"); nAll++; } });
+      if (nAll){ save(t("attAllDone",{n:nAll})); render(); } break; }
     case "markAll": rosterOf(db,state.classId,state.date).forEach(function(x){ if (attStatus(state.date,state.classId,x.id)==="none") setAtt(x.id,"present"); }); save(); render(); break;
     case "sheetAtt": { // choosing a state saves (with any typed note) and closes the sheet
       var ta=document.getElementById("noteInput");
@@ -141,8 +144,49 @@ app.addEventListener("click",function(ev){
       var qph=(db.gbQuestions[qkey(s.id,sh.q)]||{}).phase||"closed";
       var changed=(orig&&orig.mark||null)!==mk;
       if (!mk && !cm) delete db.gbMarks[k];
-      else db.gbMarks[k]={mark:mk,phase:(orig&&orig.mark&&!changed)?orig.phase:qph,comment:cm,overridden:changed?(!!mk):(orig?!!orig.overridden:false)};
+      else { db.gbMarks[k]={mark:mk,phase:(orig&&orig.mark&&!changed)?orig.phase:qph,comment:cm,overridden:changed?(!!mk):(orig?!!orig.overridden:false)};
+        var at0=mk ? (orig&&orig.mark ? orig.at : Date.now()) : null; if (at0) db.gbMarks[k].at=at0; }   // editing a mark keeps its original time
       state.sheet=null; save(); render(); break;
+    }
+    /* ----- 자리배치 출석 (seat screen on the class page) ----- */
+    case "saChip": { var cs=el.getAttribute("data-sid"); state.seatSel = (state.seatSel&&state.seatSel.sid===cs&&state.seatSel.from==null) ? null : {sid:cs,from:null}; render(); break; }
+    case "saCancel": state.seatSel=null; render(); break;
+    case "saSet": {   // unseated student → 온라인 / 결석 / 미체크 (stays unseated)
+      if (!state.seatSel) break;
+      var ss=state.seatSel.sid, fS=seatingFor(state.classId,state.date), stale=false;
+      Object.keys(fS.map).forEach(function(i){ if (fS.map[i]===ss){ delete fS.map[i]; stale=true; } });   // drop a hidden leftover seat
+      setAtt(ss,el.getAttribute("data-st"));
+      if (stale) seatWrite(fS.map); else { state.seatSel=null; save(); }
+      render(); break;
+    }
+    case "saClose": {   // 마감: unseated students with no status → 결석; 온라인 (and everything else) stays
+      var nC=0; rosterOf(db,state.classId,state.date).forEach(function(x){ if (attStatus(state.date,state.classId,x.id)==="none"){ setAtt(x.id,"absent"); nC++; } });
+      state.seatSel=null; if (nC) save(t("saClosed",{n:nC})); else toast(t("saCloseNone")); render(); break;
+    }
+    case "saMove": {   // from the long-press sheet: pick the student up, the next seat tap puts them down (status and memo kept)
+      var mv=el.getAttribute("data-sid"), mi=seatIdxOf(state.classId,state.date,mv);
+      state.sheet=null; state.seatSel = mi!=null ? {sid:mv,from:mi} : null; render(); break;
+    }
+    case "saSeat": {
+      var ix=el.getAttribute("data-idx"), cd=state.date, cc=state.classId, fullS=seatingFor(cc,cd).map, visS=visibleSeats(fullS,cc,cd), occS=visS[ix]||null, selS=state.seatSel;
+      if (selS && selS.from!=null){   // moving a seated student: empty seat → move, taken seat → swap, same seat → cancel
+        if (selS.from!==ix){
+          Object.keys(fullS).forEach(function(i){ if (fullS[i]===selS.sid) delete fullS[i]; });
+          if (occS) fullS[selS.from]=occS;
+          fullS[ix]=selS.sid; seatWrite(fullS);
+        } else state.seatSel=null;
+        render(); break;
+      }
+      if (occS){   // tap a seated student: 등원 → 지각 → 미체크 (seat freed, back to the list)
+        if (attStatus(cd,cc,occS)==="present"){ setAtt(occS,"late"); state.seatSel=null; save(); }
+        else { delete fullS[ix]; setAtt(occS,"none"); seatWrite(fullS); }
+        render(); break;
+      }
+      if (!selS) break;   // empty seat with nobody selected
+      var stN=seatStatusFor(classById(cc),cd,selS.sid);
+      Object.keys(fullS).forEach(function(i){ if (fullS[i]===selS.sid) delete fullS[i]; });
+      fullS[ix]=selS.sid; setAtt(selS.sid,stN); seatWrite(fullS);   // one save: seating + attendance
+      render(); break;
     }
     case "openSeat": state.view="seat"; state.seatSel=null; state.confirm=null; render(); window.scrollTo(0,0); break;
     case "seatTray": { var ts=el.getAttribute("data-sid"); state.seatSel = (state.seatSel&&state.seatSel.sid===ts) ? null : {sid:ts,from:null}; render(); break; }
@@ -180,7 +224,7 @@ app.addEventListener("click",function(ev){
     case "askReset": state.confirm="reset"; render(); break;
     case "pickTeacher": T=teacherById(el.getAttribute("data-tid")); store.set(TEACHER_KEY,T.id); state={view:"home",date:state.date,classId:null,sessionId:null,q:1,sheet:null,confirm:null,expanded:{},seatSel:null}; render(); window.scrollTo(0,0); break;
     case "settingsOpen": state.sheet={kind:"settings"}; state.confirm=null; render(); break;
-    case "setOpt": { var ok=el.getAttribute("data-k"), ov=el.getAttribute("data-v"); db.settings[T.id]=db.settings[T.id]||{}; db.settings[T.id][ok]= ok==="seating" ? ov==="1" : ov; save(); render(); break; }
+    case "setOpt": { var ok=el.getAttribute("data-k"), ov=el.getAttribute("data-v"); db.settings[T.id]=db.settings[T.id]||{}; db.settings[T.id][ok]= ok==="seating" ? (ov==="att" ? "att" : ov==="on") : ov; state.seatSel=null; save(); render(); break; }   // seating: false 끄기 · true 켜기 · "att" 자리배치 출석
     case "backupSave": backupSave(); break;
     case "restoreDo": {
       var cf=state.confirm; if (!cf) break;
@@ -192,6 +236,13 @@ app.addEventListener("click",function(ev){
         db=Object.assign(emptyDb(),JSON.parse(JSON.stringify(cf.data))); TEACHERS.forEach(function(x){ mergeTeacher(db,x); });
         state.confirm=null; state.sheet=null; save(t("restoreDone"));
       }
+      render(); break;
+    }
+    case "restoreMerge": {
+      var cm=state.confirm; if (!cm || cm.kind!=="restore") break;
+      var before2=JSON.stringify(db), nm=0;
+      try { nm=mergeBackup(JSON.parse(JSON.stringify(cm.data))); state.confirm=null; state.sheet=null; if (persist()) toast(nm?t("mergeDone",{n:nm}):t("mergeNone")); }
+      catch(e){ db=JSON.parse(before2); state.confirm=null; toast(t("backupBad")); }
       render(); break;
     }
     case "resetDo": wipeTeacher(db,T.id); mergeTeacher(db,T); state={view:"home",date:todayIso(),classId:null,sessionId:null,q:1,sheet:null,confirm:null,expanded:{},seatSel:null}; save(t("resetDone")); render(); break;
@@ -213,17 +264,21 @@ app.addEventListener("change",function(ev){
     render(); return;
   }
   if (ev.target.id==="backupFile" && ev.target.files && ev.target.files[0]){ var bf=ev.target.files[0]; ev.target.value=""; backupLoad(bf); return; }
-  if (ev.target.id==="datePick" && ev.target.value){ state.date=ev.target.value; state.sheet=null; render(); }
+  if (ev.target.id==="datePick" && ev.target.value){ state.date=ev.target.value; state.sheet=null; state.seatSel=null; render(); }
 });
 document.addEventListener("keydown",function(ev){
   if (state.sheet && state.sheet.kind==="pin"){ if (/^[0-9]$/.test(ev.key)){ pinPress(ev.key); return; } if (ev.key==="Backspace"){ pinPress("del"); return; } }
   if (ev.key==="Escape" && state.sheet){ state.sheet=null; render(); } });
 
 /* long-press on tiles → sheet */
-var pressTimer=null, suppressClick=false;
+// The press is cancelled when the finger moves (PRESS_MOVE_PX) or the page scrolls, so a scroll that starts on a tile never opens
+// a sheet. suppressClick only swallows the click that ends the long-press itself: every new touch clears it, so the next tap
+// always registers.
+var pressTimer=null, suppressClick=false, pressAt=null, PRESS_MOVE_PX=10;
 app.addEventListener("pointerdown",function(ev){
+  suppressClick=false;
   var tile=ev.target.closest("button.tile"); if (!tile) return;   // 숙제 tiles: tap only
-  clearTimeout(pressTimer);
+  clearTimeout(pressTimer); pressAt={x:ev.clientX,y:ev.clientY};
   pressTimer=setTimeout(function(){
     var sid=tile.getAttribute("data-sid");
     if (state.view==="class") state.sheet={kind:"att",sid:sid,st:attStatus(state.date,state.classId,sid),note:attNote(state.date,state.classId,sid)};
@@ -234,10 +289,40 @@ app.addEventListener("pointerdown",function(ev){
   },450);
 });
 ["pointerup","pointercancel","pointerleave"].forEach(function(n){ app.addEventListener(n,function(){ clearTimeout(pressTimer); }); });
+app.addEventListener("pointermove",function(ev){ if (pressAt && (Math.abs(ev.clientX-pressAt.x)>PRESS_MOVE_PX || Math.abs(ev.clientY-pressAt.y)>PRESS_MOVE_PX)){ clearTimeout(pressTimer); pressAt=null; } });
+window.addEventListener("scroll",function(){ clearTimeout(pressTimer); pressAt=null; },{passive:true,capture:true});
 app.addEventListener("contextmenu",function(ev){ if (ev.target.closest(".tile")) ev.preventDefault(); });
 
 // Another tab (or, later, another device via the storage adapter) changed the records: reload and redraw.
-store.onRemoteChange(STORE_KEY,function(){ db=load(); state.confirm=null; render(); toast(t("remoteReload")); });
+// Shared storage: the records in memory are always replaced at once (the next save must not write stale ones back), but an
+// open sheet is left alone so a memo being typed is not lost; the page redraws when the sheet closes.
+store.onRemoteChange(STORE_KEY,function(){
+  db=load();
+  if (store.shared){ if (!state.sheet) render(); return; }
+  state.confirm=null; render(); toast(t("remoteReload"));
+});
+// "저장 중 / 저장 안 됨": shown only while changes have not reached shared storage yet.
+function syncBadge(s){
+  var el=document.getElementById("sync"); if (!el) return;
+  if (!s || !s.pending){ el.hidden=true; return; }
+  el.hidden=false; el.className=s.state==="failed"?"failed":""; el.textContent=t(s.state==="failed"?"syncFailed":"syncSaving",{n:s.pending});
+}
+if (store.shared){
+  store.onStatus(syncBadge); syncBadge(store.status());
+  store.onImported(function(n){ toast(t("syncImported",{n:n})); });
+  store.ready().then(function(){ db=load(); if (!state.sheet) render(); });   // the first pull may have finished before this file loaded
+}
+
+// 자리배치 출석: keep the status line (등원 / 지각 rule and the Seoul clock) current while the class page is open.
+// Only those two elements are replaced, so a touch in progress and the scroll position are left alone.
+var SEAT_RULE_REFRESH_MS=15000;
+setInterval(function(){
+  if (state.view!=="class" || !T || !seatAttOn()) return;
+  var c=classById(state.classId), rule=document.getElementById("saRule"), help=document.getElementById("saHelp");
+  if (!c || !rule) return;
+  rule.outerHTML=seatRuleHtml(c,state.date);
+  if (help) help.innerHTML=seatHelpInner(c,state.date);
+},SEAT_RULE_REFRESH_MS);
 
 render();
 if (!store.ok) toast(t("storageOff"));

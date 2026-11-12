@@ -340,7 +340,7 @@ function buildWorkbook(a,b,classIds){
           if (cv.pts==null){ put(ws,r,2+i,"–",{kind:"na"}); return; }
           put(ws,r,2+i,cv.pts,{kind:cv.rank===1?"ok":"none",bold:cv.rank===1,color:cv.rank===1?null:INK,note:cv.rank+"위 / "+cv.of+"명 · 만점 "+cv.max});
         });
-        if (x.n){ put(ws,r,S0,x.pts,{bold:true}); put(ws,r,S0+1,x.max,{color:MUTE}); putPct(ws,r,S0+2,x.pts/x.max,{bold:true}); put(ws,r,S0+3,x.n+" / "+x.m); put(ws,r,S0+4,x.rank,{bold:true,kind:x.rank===1?"ok":null}); }
+        if (x.n){ put(ws,r,S0,x.pts,{bold:true}); put(ws,r,S0+1,x.max,{color:MUTE}); if (x.max) putPct(ws,r,S0+2,x.pts/x.max,{bold:true}); else put(ws,r,S0+2,"–",{kind:"na"});   /* a 골든벨 with no scored question yet: 0/0 would write NaN, which Excel cannot read */ put(ws,r,S0+3,x.n+" / "+x.m); put(ws,r,S0+4,x.rank,{bold:true,kind:x.rank===1?"ok":null}); }
         else { for (var e=0;e<5;e++) put(ws,r,S0+e,e===3?"0 / "+x.m:"–",{kind:"na"}); }
         r++;
       });
@@ -367,7 +367,7 @@ function buildWorkbook(a,b,classIds){
         top.forEach(function(v,i){ put(ws,r,S0+i,v,{bold:true,color:v?INK:"FFB6BEC9"}); });
         r++;
       });
-      r=noteLine(ws,r,W,"그날 골든벨 점수의 반 안 순위 · 동점은 같은 순위 (1, 1, 3) · 오른쪽 = 1 · 2 · 3위를 한 횟수");
+      r=noteLine(ws,r,W,"그날 골든벨 점수의 반 안 순위 · 합계 동점이면 문제별 1위를 더 많이 한 학생이 위 (다음은 2위 횟수…) · 그래도 같으면 같은 순위 (1, 1, 3) · 오른쪽 = 1 · 2 · 3위를 한 횟수");
       // 표시
       r++; r=band(ws,r,W,t("gb")+" 표시  ·  문제 순서대로");
       gbHead(MARKS.concat([t("unmarked")]));

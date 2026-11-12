@@ -24,7 +24,7 @@ function uid(p){ return p+Date.now().toString(36)+Math.floor(Math.random()*1e4).
    attendance["date_classId_studentId"] = {status, note}
    gbSessions[id] = {id, classId, date, status, playerIds[], joinedAt{sid:q}, questionCount, currentQ, startedAt}
    gbQuestions["sessionId_q"] = {phase: first|retry|hint|closed}
-   gbMarks["sessionId_q_studentId"] = {mark: ◎|O|△|X|null, phase, comment, overridden}
+   gbMarks["sessionId_q_studentId"] = {mark: ◎|O|△|X|null, phase, comment, overridden, at}   (at = when the student was first marked on this question; optional)
 --------------------------------------------------- */
 function noGb(c){ return !!c.levelup; }   // 레벨업 특강 only. 부담임 (B, sub:true) days also run 골든벨 (Jay, 2026-11-11); sub now only drives the 부담임 tag
 function activeOn(e,d){ return e.start<=d && (!e.end || d<e.end); }
@@ -68,7 +68,6 @@ var HW_QUICK=["책 안 가져옴","일부만 함","채점 안 함","오답 정�
 function attNote(d,c,s){ var r=db.attendance[akey(d,c,s)]; return r && r.note ? r.note : ""; }
 
 var PHASE_IDX={first:0,hint:1,closed:2};
-var DOUBLE_MS=320;
 function isPlayerStatus(st){ return st==="present"||st==="online"||st==="late"; }
 function markCls(m){ return (m==="◎"||m==="O")?"ok":m==="△"?"mid":m==="X"?"bad":"none"; }
 var ATT_CLS={present:"ok",online:"on",late:"mid",absent:"bad",none:"none"};
@@ -80,7 +79,7 @@ function played(sess,q,st){ var j=(sess.joinedAt&&sess.joinedAt[st])||1; return 
 /* ---------- 골든벨 점수 (Jay, 2026-11-11) ----------
    Per question: ◎ 5, O 4, △ 3, X 2, 미표시 or 미참가 (–) 1. A session's score is the sum over its questions; max = 5 x questions.
    A question counts once it is settled (closed, or the session ended). The open question counts only for students already marked,
-   so the live standings move as the teacher taps. Ranking = standard competition ranking (ties share a rank: 1, 1, 3).
+   so the live standings move as the teacher taps. Ranking: points, then who was marked first (see gbRankRows); what is still tied shares a rank (1, 1, 3).
    Nothing is stored: scores are always computed from gbMarks, so editing a mark later re-scores the session. */
 var GB_PTS={"◎":5,"O":4,"△":3,"X":2}, GB_PTS_NONE=1, GB_PTS_MAX=5;
 function gbQSettled(s,q){ var qd=db.gbQuestions[qkey(s.id,q)]; return s.status==="ended" || !!(qd && qd.phase==="closed"); }
@@ -89,22 +88,40 @@ function gbQPts(s,q,sid){   // points for one question, or null when it does not
   if (mk && GB_PTS[mk]) return GB_PTS[mk];
   return gbQSettled(s,q) ? GB_PTS_NONE : null;
 }
-function gbRankRows(rows){   // rows: [{p, pts}] -> sorted, with .rank (ties share)
-  rows.sort(function(a,b){ return b.pts-a.pts || byName(a.p,b.p); });
-  rows.forEach(function(r,i){ r.rank = (i && rows[i-1].pts===r.pts) ? rows[i-1].rank : i+1; });
+// Ties on points are broken by time (Jay, 2026-11-12): the student who got the same mark earlier ranks higher.
+// One question (.tb): how many students with the same points were marked before this one. Marks without a time (.at; records
+//   from before this rule, seeded samples) and 미표시 all have tb 0, so they still share a rank.
+// Session total (.places): equal totals → more 1st places on single questions ranks higher, then more 2nd places, and so on
+//   (places[k] = number of questions on which the student ranked k). Equal all the way down → shared rank.
+function gbTieCmp(a,b){   // <0: a ranks higher
+  if (a.places || b.places){ var x=a.places||[], y=b.places||[], n=Math.max(x.length,y.length); for (var k=1;k<n;k++){ var d=(y[k]||0)-(x[k]||0); if (d) return d; } return 0; }
+  return (a.tb||0)-(b.tb||0);
+}
+function gbRankRows(rows){   // rows: [{p, pts, tb | places}] -> sorted, with .rank (same pts and same tie-break share)
+  rows.sort(function(a,b){ return b.pts-a.pts || gbTieCmp(a,b) || byName(a.p,b.p); });
+  rows.forEach(function(r,i){ r.rank = (i && rows[i-1].pts===r.pts && gbTieCmp(rows[i-1],r)===0) ? rows[i-1].rank : i+1; });
+  return rows;
+}
+function gbQRows(s,q){   // one question: [{p, pts, at, tb}] for students whose points count
+  var rows=[]; s.playerIds.map(studentById).filter(Boolean).forEach(function(p){
+    var x=gbQPts(s,q,p.id); if (x==null) return;
+    var m=played(s,q,p.id) ? getMark(s.id,q,p.id) : null;
+    rows.push({p:p,pts:x,at:(m&&m.mark&&m.at)||null});
+  });
+  rows.forEach(function(r){ r.tb=rows.filter(function(o){ return o!==r && o.pts===r.pts && o.at!=null && (r.at==null ? false : o.at<r.at); }).length; });
   return rows;
 }
 function gbScores(s,upTo){   // session standings through question upTo (default: all)
   var Q=Math.min(upTo||s.questionCount,s.questionCount);
   var rows=s.playerIds.map(studentById).filter(Boolean).map(function(p){
     var pts=0, n=0; for (var q=1;q<=Q;q++){ var x=gbQPts(s,q,p.id); if (x!=null){ pts+=x; n++; } }
-    return {p:p,pts:pts,n:n,max:n*GB_PTS_MAX};
-  });
+    return {p:p,pts:pts,n:n,max:n*GB_PTS_MAX,places:[]};
+  }), by={}; rows.forEach(function(r){ by[r.p.id]=r; });
+  for (var q2=1;q2<=Q;q2++) gbQRank(s,q2).forEach(function(x){ var pl=by[x.p.id].places; pl[x.rank]=(pl[x.rank]||0)+1; });
   return gbRankRows(rows);
 }
 function gbQRank(s,q){   // ranking for one question; students with no points yet are left out
-  var rows=[]; s.playerIds.map(studentById).filter(Boolean).forEach(function(p){ var x=gbQPts(s,q,p.id); if (x!=null) rows.push({p:p,pts:x}); });
-  return gbRankRows(rows);
+  return gbRankRows(gbQRows(s,q));
 }
 function gbRankHtml(rows,showMax){
   return '<ol class="rk">'+rows.map(function(r){ return '<li'+(r.rank===1&&r.pts>0?' class="top"':'')+'><span class="rn">'+r.rank+'</span><span class="nm">'+esc(r.p.name)+'</span><span class="pt">'+r.pts+(showMax?' <small>/ '+r.max+'</small>':' <small>'+t("ptsUnit")+'</small>')+'</span></li>'; }).join("")+'</ol>';
@@ -123,7 +140,29 @@ function seatingFor(cid,d){  // stored map for this day, else the most recent ea
     return {map:{},layout:"4x3",teacher:side,src:"none"};
   }
   r=db.seating[seatKey(best,cid)];
+  // 자리배치 출석: placing a student is what records attendance, so a new lesson starts with every seat empty.
+  // Only the room setup (layout, 선생님 side) carries over; the earlier seats are shown as a hint (seatPrevMap).
+  if (seatAttOn()) return {map:{},layout:r.layout||"4x3",teacher:r.teacher||"L",src:"none"};
   return {map:Object.assign({},r.seats),layout:r.layout||"4x3",teacher:r.teacher||"L",src:"prev"};
+}
+function seatPrevMap(cid,d){   // seats of this class's most recent earlier lesson ({} if none): the "지난 자리" hint
+  var best=null; Object.keys(db.seating).forEach(function(x){ var p=x.split("_"); if (p[1]===cid && p[0]<d && (!best||p[0]>best)) best=p[0]; });
+  return best ? Object.assign({},db.seating[seatKey(best,cid)].seats) : {};
+}
+/* ---------- 자리배치 출석: status given when a student is seated (Jay, 2026-11-12) ----------
+   "Today" is today's date in Asia/Seoul, whatever time zone the phone is set to. On today's lesson a student seated from
+   class start + SEAT_LATE_GRACE_MIN (15:05:00 for a 15:00 class) is 지각, before that 등원. On a past or future lesson
+   seating always gives 등원; 지각 is then reached by tapping the seated student. */
+var SEAT_LATE_GRACE_MIN=5;
+function seoulNow(){   // {ymd:"YYYY-MM-DD", sec: seconds since midnight, hm:"HH:MM"} on the Seoul wall clock
+  var p={}; new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(new Date()).forEach(function(x){ p[x.type]=x.value; });
+  return {ymd:p.year+"-"+p.month+"-"+p.day, sec:(+p.hour)*3600+(+p.minute)*60+(+p.second), hm:p.hour+":"+p.minute};
+}
+function classStartMin(c){ var m=/^(\d{1,2}):(\d{2})/.exec((c&&c.time)||""); return m ? (+m[1])*60+(+m[2]) : null; }
+function hmOf(min){ return pad(Math.floor(min/60)%24)+":"+pad(min%60); }
+function seatAutoStatus(c,d,now){
+  now=now||seoulNow(); var st=classStartMin(c);
+  return (d===now.ymd && st!=null && now.sec>=(st+SEAT_LATE_GRACE_MIN)*60) ? "late" : "present";
 }
 // Front row under the seat grid: the 선생님 block sits in the far-left or far-right column (seating record .teacher = "L" | "R";
 // older records without it = "L"). In 자리배치 the block is a button that moves it to the other side.

@@ -53,7 +53,7 @@ function viewHome(){
     h+='<p class="hint">'+t("noClassDay")+'</p>'+(nx?'<button class="btn block" data-act="setDate" data-date="'+nx+'">'+t("nextClassDay")+' · '+fmtDate(nx)+'</button>':'');
   }
   h+='<button class="btn outline block" data-act="exportOpen">📊 '+t("exportBtn")+'</button>';
-  h+='<div class="foot"><span>'+t("localNote")+'</span><button class="linkbtn" data-act="settingsOpen">⚙ '+t("settings")+'</button></div>';
+  h+='<div class="foot"><span>'+t(store.shared?"sharedNote":"localNote")+'</span><button class="linkbtn" data-act="settingsOpen">⚙ '+t("settings")+'</button></div>';
   h+='</main>';
   if (state.sheet && state.sheet.kind==="export") h+=exportSheet();
   if (state.sheet && state.sheet.kind==="settings") h+=settingsSheet();
@@ -93,10 +93,11 @@ function viewClass(){
   if (d>today) h+='<p class="banner">'+t("futureDate")+'</p>';
   if (!r.length) return h+'<p class="hint">'+(c.rosterPending?t("rosterPendingHint"):t("emptyClass"))+'</p></main>';
   h+='<div class="summary five">'+ATT_KEYS.map(function(k){ return '<div class="chip '+ATT_CLS[k]+'"><b>'+cnt[k]+'</b>'+t(k)+'</div>'; }).join("")+'</div>';
-  h+='<div class="grid">'+r.map(function(s){
+  if (seatAttOn()) h+=seatAttHtml(c,d,r);   // 자리배치 출석: the seat screen takes the place of the name cards
+  else h+='<div class="grid">'+r.map(function(s){
     var st=attStatus(d,c.id,s.id), nt=attNote(d,c.id,s.id), ex=isExpected(d,c.id,s.id);
     return '<button class="tile s-'+ATT_CLS[st]+(ex?' exp':'')+'" data-act="cycle" data-sid="'+s.id+'" aria-label="'+esc(s.name)+', '+t(st)+(ex?' ('+t("expTag")+')':'')+'"><span class="nm">'+esc(s.name)+'</span><span class="st">'+t(st)+(ex?' · '+t("expTag"):'')+'</span>'+(nt?'<span class="dot" aria-hidden="true"></span>':'')+'</button>';
-  }).join("")+'</div><p class="hint">'+t("noteHint")+'</p>';
+  }).join("")+'</div>'+(cnt.none?'<button class="btn block attall" data-act="attAll">✓ '+t("attAll")+' <span class="muted">· '+t("attAllN",{n:cnt.none})+'</span></button>':'')+'<p class="hint">'+t("noteHint")+'</p>';
 
   // 숙제 확인: one card per student — tap the card body to toggle 했어요 / 안 했어요, ✎ to write a comment
   var hr=r.filter(function(s){ return hwEligible(d,c.id,s.id); }), hwOut=r.length-hr.length;
@@ -124,7 +125,7 @@ function viewClass(){
   var players=cnt.present+cnt.online+cnt.late, sess=sessionsOf(c.id,d);
   h+='<section class="gbsec"><div class="sechead"><h2 class="sec">'+t("gb")+'</h2><span class="muted">'+t("gbPlayers",{n:players})+'</span></div>';
   var vis=visibleSeats(seatingFor(c.id,d).map,c.id,d), inroom=cnt.present+cnt.late;
-  if (seatingOn()) h+='<button class="btn block" data-act="openSeat">🪑 '+t("seatBtn")+' <span class="muted">· '+t("seatCount",{a:Object.keys(vis).length,b:inroom})+'</span></button>';
+  if (seatingOn() && !seatAttOn()) h+='<button class="btn block" data-act="openSeat">🪑 '+t("seatBtn")+' <span class="muted">· '+t("seatCount",{a:Object.keys(vis).length,b:inroom})+'</span></button>';
   var gs=sess[0];   // one Golden Bell per class per day
   if (noGb(c)){
     h+='<p class="hint">'+t(c.sub?"subNoGb":"levelupNoGb")+'</p>';   // 레벨업 특강: attendance + seating only
@@ -153,11 +154,70 @@ function hwSheet(c){
 }
 function attSheet(c){
   var s=studentById(state.sheet.sid), st=state.sheet.st;
+  // 자리배치 출석: a seated student can be moved to another seat from here, keeping status and memo (Jay, 2026-11-13)
+  var canMove=seatAttOn() && seatIdxOf(c.id,state.date,s.id)!=null;
   return '<div class="scrim" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="'+esc(s.name)+'">'+
     '<h2>'+esc(s.name)+' <span class="muted">'+esc(c.name)+' · '+shortDate(state.date)+'</span></h2>'+
+    (canMove?'<button class="btn outline block" data-act="saMove" data-sid="'+s.id+'">'+t("saMove")+'</button>':'')+
     '<div class="seg five att">'+ATT_KEYS.map(function(k){ return '<button class="'+ATT_CLS[k]+'" data-act="sheetAtt" data-st="'+k+'" aria-pressed="'+(k===st)+'">'+t(k)+'</button>'; }).join("")+'</div>'+
     '<label class="lbl" for="noteInput">'+t("note")+'</label><textarea id="noteInput" rows="3" placeholder="'+t("notePh")+'">'+esc(state.sheet.note)+'</textarea>'+
     '<div class="row"><button class="btn" data-act="closeSheet">'+t("cancel")+'</button><button class="btn primary" data-act="saveAtt">'+t("save")+'</button></div></div>';
+}
+
+/* ---------- 자리배치 출석 (seat screen inside the class page; setting "seating" = "att") ----------
+   Everyone starts unseated (미체크). Tap a student chip, then an empty seat: the student is seated and gets 등원 or 지각 from
+   the Seoul clock (seatAutoStatus). Tap a seated student: 등원 → 지각 → 미체크 (seat freed). Unseated students can be set
+   온라인 / 결석 / 미체크 from the action row. It writes the same db.attendance and db.seating records as the name cards and
+   🪑 자리배치, so 숙제, 골든벨 and the exports need nothing new. */
+function seatIdxOf(cid,d,sid){ var m=visibleSeats(seatingFor(cid,d).map,cid,d), f=null; Object.keys(m).forEach(function(i){ if (m[i]===sid) f=i; }); return f; }
+function seatRuleHtml(c,d){   // status line; refreshed every 15 s by app.js
+  var now=seoulNow(), st=classStartMin(c), cls, txt, clock="";
+  if (d!==now.ymd || st==null){ cls="neutral"; txt=t(d>now.ymd?"saRuleFuture":"saRulePast"); }
+  else {
+    var s=hmOf(st), l=hmOf(st+SEAT_LATE_GRACE_MIN), lateAt=(st+SEAT_LATE_GRACE_MIN)*60; clock=now.hm;
+    if (now.sec<st*60){ cls="ok"; txt=t("saRuleBefore",{s:s,l:l}); }
+    else if (now.sec<lateAt){ cls="mid"; txt=t("saRuleGrace",{n:Math.ceil((lateAt-now.sec)/60),l:l}); }
+    else { cls="bad"; txt=t("saRuleLate",{l:l}); }
+  }
+  return '<div class="sarule '+cls+'" id="saRule"><span class="tx">'+txt+'</span>'+(clock?'<span class="ck" aria-label="'+t("saClock")+' '+clock+'">'+clock+'</span>':'')+'</div>';
+}
+function seatHelpInner(c,d){
+  var sel=state.seatSel, p=sel&&studentById(sel.sid); if (!p) return t("saHelp");
+  if (sel.from!=null) return t("saHelpMove",{name:esc(p.name)});
+  return t("saHelpSel",{name:esc(p.name),st:t(seatStatusFor(c,d,p.id))});
+}
+// Status a student gets when seated now. One who is already 등원 / 지각 on record but has no seat (after a layout change, or added
+// to 골든벨 without a seat) keeps that status; everyone else, 예정 included, gets it from the clock.
+function seatStatusFor(c,d,sid){ var r=db.attendance[akey(d,c.id,sid)]; return (r && (r.status==="present"||r.status==="late")) ? r.status : seatAutoStatus(c,d); }
+function seatAttHtml(c,d,r){
+  var sf=seatingFor(c.id,d), map=visibleSeats(sf.map,c.id,d), lay=sf.layout, aide=seatView()==="A", sel=state.seatSel;
+  if (sel && !r.some(function(s){ return s.id===sel.sid; })) sel=state.seatSel=null;
+  var seated={}; Object.keys(map).forEach(function(i){ seated[map[i]]=1; });
+  var lastIdx=null; if (sel && sel.from==null){ var pv=seatPrevMap(c.id,d); Object.keys(pv).forEach(function(i){ if (pv[i]===sel.sid && !map[i]) lastIdx=String(i); }); }
+  var h=seatRuleHtml(c,d)+'<p class="helpline" id="saHelp">'+seatHelpInner(c,d)+'</p>';
+  h+='<div class="seatwrap">'+(aide?frontRowHtml(lay,sf.teacher,true,true):'')+'<div class="seats'+(colsOf(lay)===3?' c3':'')+'">';
+  for (var k=0;k<12;k++){
+    var i=aide?11-k:k, o=map[String(i)], p=o&&studentById(o);
+    if (p){ var st=attStatus(d,c.id,o), nt=attNote(d,c.id,o);
+      h+='<button class="tile s-'+ATT_CLS[st]+(sel&&sel.from===String(i)?' sel':'')+'" data-act="saSeat" data-idx="'+i+'" data-sid="'+o+'" aria-label="'+esc(p.name)+', '+t(st)+'"><span class="nm">'+esc(p.name)+'</span><span class="st">'+t(st)+'</span>'+(nt?'<span class="dot" aria-hidden="true"></span>':'')+'</button>';
+    }
+    else if (sel && String(i)===lastIdx) h+='<button class="seat target last" data-act="saSeat" data-idx="'+i+'">'+t("saLast")+'<small>'+esc(studentById(sel.sid).name)+'</small></button>';
+    else h+='<button class="seat'+(sel?' target':'')+'" data-act="saSeat" data-idx="'+i+'">'+t(sel?"saHere":"emptySeat")+'</button>';
+  }
+  h+='</div>'+(aide?'<div class="front back">'+t("backAide")+'</div>':frontRowHtml(lay,sf.teacher,true))+'</div>';
+  var tray=r.filter(function(s){ return !seated[s.id]; });
+  h+='<div class="sahead"><h2 class="sec">'+t("saTray",{n:tray.length})+'</h2><button class="btn danger pill" data-act="saClose">'+t("saClose")+'</button></div>';
+  h+= tray.length ? '<div class="tray sa">'+tray.map(function(s){ var st=attStatus(d,c.id,s.id), ex=isExpected(d,c.id,s.id);
+      return '<button class="chipbtn'+(st==="none"?'':' sa-'+ATT_CLS[st])+(sel&&sel.sid===s.id?' sel':'')+'" data-act="saChip" data-sid="'+s.id+'" aria-pressed="'+!!(sel&&sel.sid===s.id)+'">'+esc(s.name)+(st==="none"?'':' · '+t(st))+(ex?' · '+t("expTag"):'')+'</button>'; }).join("")+'</div>'
+    : '<p class="hint">'+t("allSeated")+'</p>';
+  if (sel && sel.from==null) h+='<div class="sarow"><button class="on" data-act="saSet" data-st="online">'+t("online")+'</button><button class="bad" data-act="saSet" data-st="absent">'+t("absent")+'</button><button class="none" data-act="saSet" data-st="none">'+t("none")+'</button><button data-act="saCancel">'+t("cancel")+'</button></div>';
+  else if (sel) h+='<button class="btn block" data-act="saCancel">'+t("cancel")+'</button>';
+  // room setup: 보는 위치 and layout (the 선생님 block in the front row switches sides)
+  h+=seatViewSeg();
+  if (state.confirm && typeof state.confirm==="string" && state.confirm.indexOf("layout:")===0)
+    h+='<p class="hint" style="color:var(--bad)">'+t("layoutConfirm")+'</p><div class="row"><button class="btn" data-act="cancelConfirm">'+t("cancel")+'</button><button class="btn danger" data-act="layoutDo" data-l="'+state.confirm.slice(7)+'">'+t("layoutDo")+'</button></div>';
+  else h+='<div class="layoutseg">'+["4x3","3x4"].map(function(l){ var kk=l==="4x3"?"43":"34"; return '<button data-act="layout" data-l="'+l+'" aria-pressed="'+(lay===l)+'">'+t("layout"+kk)+'<small>'+t("layout"+kk+"s")+'</small></button>'; }).join("")+'</div>';
+  return h;
 }
 
 /* ---------- S2b seating (자리배치) ---------- */
@@ -344,22 +404,24 @@ function viewPick(){
   return h+'</ul></main>';
 }
 function settingsSheet(){
-  var seat=seatingOn(), two=hwTwo(), cf=state.confirm;
+  var sm=seatMode(), two=hwTwo(), cf=state.confirm;
   var h='<div class="scrim" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="'+t("settings")+'"><h2>⚙ '+t("settings")+' <span class="muted">· '+esc(T.name)+' '+t("teacherSuffix")+'</span></h2>'+
     '<button class="btn block" data-act="pinOpen">🔒 '+t("switchTeacher")+'</button>'+
-    '<span class="lbl">'+t("setSeating")+'</span><div class="seg two"><button class="ok" data-act="setOpt" data-k="seating" data-v="1" aria-pressed="'+seat+'">'+t("on")+'</button><button class="none" data-act="setOpt" data-k="seating" data-v="0" aria-pressed="'+(!seat)+'">'+t("off")+'</button></div>'+
+    '<span class="lbl">'+t("setSeating")+'</span><div class="seg three">'+[["off","off"],["on","on"],["att","seatAttOpt"]].map(function(o){ return '<button class="acc" data-act="setOpt" data-k="seating" data-v="'+o[0]+'" aria-pressed="'+(sm===o[0])+'">'+t(o[1])+'</button>'; }).join("")+'</div>'+
+    '<div class="optdesc"><b>'+t("seatT_"+sm)+'</b><span>'+t("seatD_"+sm)+'</span></div>'+
     '<span class="lbl">'+t("setHw")+'</span><div class="seg two"><button class="ok" data-act="setOpt" data-k="hw" data-v="one" aria-pressed="'+(!two)+'">'+t("hwOne")+'</button><button class="ok" data-act="setOpt" data-k="hw" data-v="two" aria-pressed="'+two+'">'+t("hwTwoLbl")+'</button></div>'+
     '<p class="metaline">'+t("setHint")+'</p>'+
     '<span class="lbl">'+t("backup")+'</span><div class="row"><button class="btn" data-act="backupSave">💾 '+t("backupSave")+'</button><label class="btn" for="backupFile">📂 '+t("backupLoad")+'</label></div>'+
-    '<input type="file" id="backupFile" accept=".json,application/json" hidden><p class="metaline">'+t("backupHint")+'</p>';
+    '<input type="file" id="backupFile" accept=".json,application/json" hidden><p class="metaline">'+t(store.shared?"sharedBackupHint":"backupHint")+'</p>';
   var lb=store.get(LAST_BACKUP_KEY); h+='<p class="metaline"'+(lb?'':' style="color:var(--warn)"')+'>'+(lb?t("lastBackup",{date:fmtStamp(lb)}):t("noBackupYet"))+'</p>';
   if (cf && (cf.kind==="restore" || cf.kind==="legacy")){
-    var ask = cf.kind==="restore" ? t("restoreAsk",{date:cf.when}) : t("legacyAsk",{name:esc(cf.name)});
+    var ask = cf.kind==="restore" ? t(store.shared?"restoreAskShared":"restoreAsk",{date:cf.when}) : t("legacyAsk",{name:esc(cf.name)});
     h+='<p class="metaline" style="color:var(--bad)">'+ask+'</p><p class="metaline">'+t("restoreCounts",{a:cf.counts.attendance,h:cf.counts.homework,g:cf.counts.gb})+'</p>'+
        '<button class="btn block" data-act="backupSave">💾 '+t("backupFirst")+'</button>'+
-       '<div class="row"><button class="btn" data-act="cancelConfirm">'+t("cancel")+'</button><button class="btn danger" data-act="restoreDo">'+t(cf.kind==="restore"?"restoreDo":"legacyDo")+'</button></div>';
+       (cf.kind==="restore"?'<p class="metaline">'+t("mergeHint")+'</p>':'')+
+       '<div class="row"><button class="btn" data-act="cancelConfirm">'+t("cancel")+'</button>'+(cf.kind==="restore"?'<button class="btn primary" data-act="restoreMerge">'+t("restoreMerge")+'</button>':'')+'<button class="btn danger" data-act="restoreDo">'+t(cf.kind==="restore"?"restoreDo":"legacyDo")+'</button></div>';
   }
-  else if (cf==="reset") h+='<p class="metaline" style="color:var(--bad)">'+t("resetConfirm",{name:esc(T.name)})+'</p><div class="row"><button class="btn" data-act="cancelConfirm">'+t("cancel")+'</button><button class="btn danger" data-act="resetDo">'+t("resetDo")+'</button></div>';
+  else if (cf==="reset") h+='<p class="metaline" style="color:var(--bad)">'+t(store.shared?"resetConfirmShared":"resetConfirm",{name:esc(T.name)})+'</p><div class="row"><button class="btn" data-act="cancelConfirm">'+t("cancel")+'</button><button class="btn danger" data-act="resetDo">'+t("resetDo")+'</button></div>';
   else h+='<button class="linkbtn" style="align-self:center" data-act="askReset">'+t("reset")+'</button>';
   return h+'<button class="btn primary block" data-act="closeSheet">'+t("close")+'</button></div>';
 }

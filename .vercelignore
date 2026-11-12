@@ -1,0 +1,7 @@
+# Only the app itself is served. Everything else stays out of the deployment.
+.claude
+tests
+docs
+*.md
+*백업*.json
+*.xlsx
