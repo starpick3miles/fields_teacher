@@ -74,3 +74,36 @@ Put the result in `EXCELJS_SRI` as `sha384-<hash>`. If the hash is wrong, the ex
 ## Adding Firebase later
 
 `js/app.js` only uses `window.FieldsStorage` (`get`, `set`, `del`, `onRemoteChange`, `ready`). To share data across devices or teachers, write a Firebase adapter in `js/storage.js` with the same methods: keep localStorage as the instant local cache, push writes to Firestore in the background, and call the `onRemoteChange` callbacks from a Firestore `onSnapshot` listener. The app already reloads and re-renders when that callback fires (it uses the same hook today for changes made in another tab).
+
+## Shared storage (Firebase)
+
+Without a backend the app keeps records in the browser only. To share them across phones, browsers and links, connect a Firebase project. The app loads the Firebase SDK from Google's CDN only when a backend is configured; there is still no build step.
+
+1. [Firebase console](https://console.firebase.google.com) → **Add project** (Analytics is not needed).
+2. **Build → Firestore Database → Create database**. Location `asia-northeast3` (Seoul). Start in production mode.
+3. **Build → Authentication → Sign-in method → Anonymous → Enable**. Under **Settings → Authorized domains** add the site's domain (`<username>.github.io`).
+4. **Firestore → Rules**, publish:
+
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /records/{id} { allow read, write: if request.auth != null; }
+     }
+   }
+   ```
+
+5. **Project settings → Your apps → Web app (`</>`)** → copy the config object into `js/remote-config.js`:
+
+   ```js
+   window.FIELDS_REMOTE = { kind: "firestore", config: { apiKey: "…", authDomain: "…", projectId: "…", appId: "…" } };
+   ```
+
+6. Push to `main`. On each phone, the first open uploads the records that browser already holds (a one-line message says how many).
+
+What to know:
+- **Who can read it.** Anonymous sign-in means anyone who has the site link can read and write the records, the same exposure the rosters in `js/teachers.js` have today. Real per-teacher access needs a real sign-in.
+- **Records made in the Claude artifact** live in that page's own browser storage, which this site cannot read. Bring them over once per phone: in the artifact, 설정 → 백업 저장; here, 설정 → 백업 불러오기 → **합치기**.
+- **Usage.** One Firestore document per record (`records/<collection>/<key>`). A phone that opens the app for the first time reads every document once, including the seeded history; later opens read only what changed. The free tier (50,000 reads and 20,000 writes a day) is enough for a pilot.
+- **Offline.** Taps are saved on the phone at once and queued; "⚠ 저장 안 됨 · n건 대기" shows until they reach Firebase. The page itself still needs the network to open (no service worker yet).
+- How it works: the header of `js/sync.js`. Test: `python3 tests/sync.py` (uses a stand-in backend, not Firebase).

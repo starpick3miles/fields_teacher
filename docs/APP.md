@@ -15,7 +15,7 @@ S1 also has 엑셀 내보내기 and ⚙ 설정 (settings, backup, switch teacher
 ### Teacher picker and settings
 - First open: "선생님을 골라 주세요". The choice is remembered per device (`fields-teacher`).
 - Switching later needs the 6-digit PIN (hash only, checked in the browser).
-- Per-teacher settings in `db.settings[teacherId]`, defaults in `TEACHERS[].defaults`: 자리배치 on/off; 숙제 확인 방식 "한 번에 확인" (`one`) or "연습 · 리뷰 따로" (`two`). Changing them never deletes records.
+- Per-teacher settings in `db.settings[teacherId]`, defaults in `TEACHERS[].defaults`: 자리배치 끄기 / 켜기 / 자리배치 출석 (stored as `false` / `true` / `"att"`); 숙제 확인 방식 "한 번에 확인" (`one`) or "연습 · 리뷰 따로" (`two`). Changing them never deletes records.
 - "이 선생님 기록 초기화" wipes only the current teacher's records and re-seeds her.
 
 ### S1 class list
@@ -23,12 +23,21 @@ S1 also has 엑셀 내보내기 and ⚙ 설정 (settings, backup, switch teacher
 - No classes that day → "이 날은 수업이 없어요" and a button to the next class day.
 
 ### S2 attendance
-- Tap cycles 미체크 → 온라인 → 지각 → 결석 → 미체크 (from 등원, a tap goes to 지각). Double tap (within ~320 ms) sets 등원. Long-press (~450 ms) opens a sheet with all states and a note.
+- Tap cycles 미체크 → 온라인 → 지각 → 결석 → 미체크 (from 등원, a tap goes to 지각). Double tap (within ~320 ms) sets 등원. Long-press (~450 ms) opens a sheet with all states and a note; it is cancelled if the finger moves or the page scrolls, and the tap after it always registers.
 - The date arrows step between this class's lessons (own days and partner days), not calendar days.
 - **Partner teacher's day** is view only, with a banner; its records are stored apart (`db.partnerAtt`).
 - **Expected attendance** (`TEACHERS[].expected`): attendance received before class is shown as the default until the teacher changes or confirms it. It is never written on its own; a teacher record always wins.
 - Past dates are editable with a banner; future dates show a banner.
 - Class with an empty roster shows "명단 준비 중".
+
+### S2 in 자리배치 출석 mode
+With the 자리배치 setting on "자리배치 출석" (`seatMode()==="att"`), the name cards on the teacher's own lesson days are replaced by a seat screen; 숙제 확인 and 골든벨 stay below, and the 🪑 자리배치 button is hidden. Partner days are unchanged.
+- Top to bottom: summary counts, status line (green before start, amber during the grace period, red after, neutral on other dates; Seoul HH:MM on the right), help line, seat grid, "아직 안 앉은 학생" chips with "마감 · 남은 학생 결석", action row, then 보는 위치 and layout.
+- Everyone starts unseated. Nothing is prefilled from the last lesson; when a student is selected, their last seat shows a dashed "지난 자리" hint if it is empty.
+- Chip, then empty seat: seated, and attendance is saved with it. Status: on today's lesson (today = the date in Asia/Seoul) 지각 from class start + 5 minutes (`SEAT_LATE_GRACE_MIN`), 등원 before; on any other date always 등원. A student with a 등원 / 지각 record but no seat keeps it.
+- Seated tap: 등원 → 지각 → 미체크 (seat freed, back to the chips). Unseated: 온라인 / 결석 / 미체크 from the action row. 마감 sets unseated 미체크 students to 결석 and keeps the rest.
+- Long-press on a seated student opens the attendance sheet, which also has "자리 옮기기": the next seat tap moves the student (a taken seat swaps) and keeps status and memo.
+- It writes the same `attendance` and `seating` records as the name cards and 🪑 자리배치.
 
 ### 숙제 확인
 - Only students in the room (등원 or 지각) get a card. Others are left out of the list, the counts, "모두 했어요" and the exports; their stored records are kept and return if the status changes back.
@@ -36,7 +45,7 @@ S1 also has 엑셀 내보내기 and ⚙ 설정 (settings, backup, switch teacher
 
 ### S2b 자리배치
 - 12 seats, layout 4×3 or 3×4, drawn from the teacher's view (front row at the bottom). Switching layout clears seats after a confirm.
-- Only 등원 and 지각 students get seats. A new date prefills from the class's most recent seating.
+- Only 등원 and 지각 students get seats. A new date prefills from the class's most recent seating (not in 자리배치 출석 mode, where seats start empty).
 - Tap a student, then a seat; tapping a taken seat swaps. The 선생님 desk sits far left or far right (`teacher: "L"|"R"`).
 - "보는 위치" (per device, `fields-seat-view`): 선생님 (앞) or 보조교사 (뒤). The 보조교사 view only changes the drawing (order reversed, left/right swapped); seat indices and saved data are the same.
 
@@ -57,8 +66,8 @@ S1 also has 엑셀 내보내기 and ⚙ 설정 (settings, backup, switch teacher
 
 - `GB_PTS = {◎:5, O:4, △:3, X:2}`; 미표시 and 미참가 (–) = 1. Session score = sum over questions; max = 5 × questions.
 - A question counts once it is closed or the session has ended. On the open question only students already marked count.
-- Ranking is standard competition ranking (ties share: 1, 1, 3); ties list in 가나다 order.
-- Nothing is stored. Scores are computed from `gbMarks` each time, so editing a mark re-scores the session.
+- Ranking: points first. A tie on points goes to the student who was marked first (Jay, 2026-11-12): each mark stores `at`, the time the student was first marked on that question (kept while the teacher cycles or edits the mark, cleared when it goes back to 미표시). Per question, earlier `at` wins among equal points. On the session total, a tie goes to the student with more 1st places on single questions, then more 2nd places, and so on (Jay's choice). Within a question, marks without `at` (older records, seeded samples) and 미표시 still share a rank (1, 1, 3); students equal on every count share a rank and list in 가나다 order.
+- No score or rank is stored. They are computed from `gbMarks` each time, so editing a mark re-scores the session.
 
 ## Data model
 
@@ -74,7 +83,7 @@ homework       {"date_classId_studentId": {h} or {p, r}, plus note, at}
 seating        {"date_classId": {seats:{"0".."11": studentId}, layout:"4x3"|"3x4", teacher:"L"|"R", at}}
 gbSessions     {id: {id, classId, date, status: active|ended, playerIds[], joinedAt{sid:q}, seats, layout, teacher, questionCount, currentQ, startedAt, endedAt}}
 gbQuestions    {"sessionId_q": {phase: first|closed}}
-gbMarks        {"sessionId_q_studentId": {mark: ◎|O|△|X|null, phase, comment, overridden}}
+gbMarks        {"sessionId_q_studentId": {mark: ◎|O|△|X|null, phase, comment, overridden, at}}
 settings       {teacherId: {seating, hw}}
 seeded         {"<tid>|<kind>|<classId>|<date>": true}      history seeded once
 ```
@@ -113,7 +122,10 @@ Built in the browser with ExcelJS 4.4.0, loaded from jsDelivr only when 내보�
 - 백업 불러오기: `FieldsBackup.parse` validates the file (JSON, app id, version, collection shapes, attendance statuses, session fields, size). Then an in-page confirm shows the backup's date and counts, with "지금 기록 먼저 백업". Nothing changes before the teacher confirms.
 - Backups from the old single-teacher apps (`{legacy:"<storage key>", db}`) are merged into the matching teacher after the same confirm; the old app's records win for the same lesson.
 
-### Firebase later
+### Shared storage (2026-11-13)
+`js/sync.js` replaces `window.FieldsStorage` with a syncing adapter when `js/remote-config.js` names a backend. The app code is unchanged: it still saves one JSON string, which is now the local cache. The adapter diffs each save into per-record changes, queues them (`fields-sync-outbox`), pushes them, pulls other devices' changes into the cache and fires `onRemoteChange`. Extra adapter members used by `js/app.js`: `shared`, `status()`, `onStatus`, `onImported`, `ready()`. Other keys: `fields-sync-cursor`, `fields-sync-imported`, `fields-sync-dirty`, `fields-sync-last`. Rules (conflicts, seeded history, import) are in the header of `js/sync.js`; setup is in README → Shared storage.
+
+### Firebase later (the original note, kept for context)
 Write an adapter in `js/storage.js` with the same methods: keep localStorage as the synchronous cache, push writes to Firestore in the background, and call the `onRemoteChange` callbacks from `onSnapshot`. The one-JSON-string store will not scale to shared data; plan to split it into the collections above (per-record documents with deterministic ids), which is what the spec's data model already describes. Needs Anonymous Auth or better and rules that deny unauthenticated access, because the data is minors' names.
 
 ## Known limits and risks

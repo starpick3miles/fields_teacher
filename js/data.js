@@ -31,7 +31,12 @@ function teacherOf(c){ return teacherById(c.teacherId); }
 function myClasses(){ return T ? db.classes.filter(function(c){ return c.teacherId===T.id; }) : []; }
 // per-teacher feature settings: db.settings[teacherId] = {seating, hw}; defaults come from TEACHERS
 function setting(k){ var s=T && db.settings && db.settings[T.id]; return s && (k in s) ? s[k] : (T ? T.defaults[k] : null); }
-function seatingOn(){ return !!setting("seating"); }
+// 자리배치 has three modes (Jay, 2026-11-13): "off" 끄기 · "on" 켜기 (name cards, then 🪑 자리배치) · "att" 자리배치 출석 (the seat
+// screen replaces the name cards; seating a student records attendance). Stored value: false / true as before, and "att" for the
+// new mode, so devices that saved the old switch need no migration and an older build reads "att" as on.
+function seatMode(){ var v=setting("seating"); return v==="att" ? "att" : (v && v!=="off") ? "on" : "off"; }
+function seatingOn(){ return seatMode()!=="off"; }   // seating features (골든벨 seat snapshot, exports) count for both 켜기 and 자리배치 출석
+function seatAttOn(){ return seatMode()==="att"; }
 function hwTwo(){ return setting("hw")==="two"; }
 
 var REAL_CODE={P:"present",L:"late",A:"absent",E:"present"};   // E = 조퇴 (left early): 등원 + note
@@ -127,6 +132,24 @@ function save(msg){ if (persist()) toast(msg||t("saved")); }
    - a backup from a teacher's old single-teacher app ({legacy:"<storage key>", db}) → merged into that teacher's
      classes; the old app's records win over what this page ships (sample 골든벨 on the same lesson is replaced). */
 var APP_ID="fields-attendance";
+// 합치기 (Jay, 2026-11-13): bring a backup of this app into the current records without replacing them. A record is copied when
+// it is missing here, or when both sides carry a time (`at`) and the backup's is later. Works on every map collection in the
+// file, including ones this version has no screen for (the published app's hwx, lessonMemo), so nothing is dropped.
+// Returns the number of records copied (seeded flags are not counted).
+function mergeBackup(x){
+  var n=0, isMap=function(o){ return o!==null && typeof o==="object" && !Array.isArray(o); };
+  var newer=function(a,b){ return isMap(a) && isMap(b) && typeof a.at==="number" && typeof b.at==="number" && a.at>b.at; };
+  var mergeMap=function(src,dst,count){ Object.keys(src).forEach(function(k){ if (!(k in dst) || newer(src[k],dst[k])){ dst[k]=src[k]; if (count) n++; } }); };
+  Object.keys(x).forEach(function(col){
+    var m=x[col]; if (!isMap(m)) return;
+    if (!isMap(db[col])) db[col]={};
+    if (col==="hwx") Object.keys(m).forEach(function(ty){ if (!isMap(m[ty])) return; if (!isMap(db.hwx[ty])) db.hwx[ty]={}; mergeMap(m[ty],db.hwx[ty],true); });
+    else mergeMap(m,db[col],col!=="seeded");
+  });
+  (x.students||[]).forEach(function(s){ if (s && s.id && !studentById(s.id)) db.students.push({id:s.id,name:s.name}); });
+  TEACHERS.forEach(function(T0){ mergeTeacher(db,T0); });
+  return n;
+}
 function importLegacy(payload){
   var T0=null; TEACHERS.forEach(function(x){ if (x.legacyKey===payload.legacy) T0=x; });
   if (!T0) throw {code:"unknown"};
