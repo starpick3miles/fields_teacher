@@ -16,7 +16,7 @@ Why: Jay asked to work through the to-do list (close the gap with the published 
 - **Noticed, not fixed:** if one script fails to load on a bad connection the app stays blank with no message. Worth a small "다시 불러오기" fallback before the pilot.
 - Git: the uncommitted work from 11-12 and 11-13 was committed on branch `seat-att-sync` (not pushed). The GitHub repo is private and Pages is not enabled.
 
-## 2026-11-13 — Vercel hosting config added; not deployed yet (Jay)
+## 2026-11-13 — Deployed on Vercel: https://fields-attendance.vercel.app (Jay)
 
 Why: Jay asked to "integrate vercel and set up web site". Built by Claude Code.
 
@@ -24,8 +24,12 @@ Why: Jay asked to "integrate vercel and set up web site". Built by Claude Code.
 - **`.vercelignore`**: `tests/`, `docs/`, `*.md`, `.claude/`, backups and `.xlsx` are not uploaded. Only `index.html`, `css/`, `js/`, `robots.txt` are served.
 - **`.gitignore`**: `.vercel` (the local project link).
 - No app code changed. `tests/e2e.py` passes (run with `/usr/local/bin/python3`, the Python that has Playwright).
-- **Not done:** nothing is deployed. Blocked on this Mac: Homebrew's Node 25.6.1 does not start (`libllhttp.9.3.dylib` missing after llhttp went to 9.4.3), so the Vercel CLI and `node --check` cannot run until Node is repaired (`brew upgrade node`), and Jay has to sign in to Vercel himself.
-- **To keep in mind when it goes live:**
+- **Deployed** with the Vercel CLI (`vercel deploy --prod`) from the working tree of branch `seat-att-sync`: project `fields-attendance`, team `fields7`, account `starpick3miles-9776` (Jay signed in himself). Production URL **https://fields-attendance.vercel.app**. Checked live: the teacher picker loads at 375 px with no console errors; `/docs`, `/tests`, `*.md` and `vercel.json` return 404; the `noindex` header is sent.
+- **Updating the site:** `export PATH=/usr/local/bin:$PATH && npx vercel deploy --prod` from the repo root. It uploads the files on disk, committed or not. `.vercel/` (the project link) is git-ignored.
+- **GitHub connected** (`npx vercel git connect`, after Jay added GitHub as a login connection in Vercel): `starpick3miles/fields_teacher` is linked to the project. From now on a push to `main` deploys production and a push to any other branch makes a preview deployment. Jay then asked to merge and push: `seat-att-sync` was merged into `main` on top of GitHub's two commits ("Create CNAME", "Delete CNAME", no net change) and `main` was pushed, so GitHub's `main` and the live site now hold the same code.
+- **Open:** Vercel asked the account owner to turn on two-factor authentication. GitHub Pages was not touched.
+- **Node on this Mac:** Homebrew's Node 25.6.1 (`/opt/homebrew/bin/node`, first on the PATH) does not start (`libllhttp.9.3.dylib` missing after llhttp went to 9.4.3). `brew upgrade node` was tried with Jay's OK and stopped: on macOS 14 it compiles the dependencies from source (hours). Homebrew's Node is unchanged and still broken. Use the working Node 22.16 in `/usr/local/bin`: `export PATH=/usr/local/bin:$PATH` before `node --check` or `npx vercel`. `node --check` passes on every `js/*.js` with it.
+- **To keep in mind:**
   - A `*.vercel.app` address is a new origin. Records saved at the GitHub Pages address or in the artifact stay there; move them with 백업 저장 → 백업 불러오기 → 합치기 (same as the artifact finding above), or by turning on shared storage.
   - For Firebase, add the Vercel domain under Authentication → Settings → Authorized domains.
   - The site is as public as the Pages one: `js/teachers.js` (children's names) is served to anyone with the link. Vercel's password protection is a paid feature.

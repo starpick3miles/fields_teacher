@@ -49,6 +49,17 @@ Working with AI agents: open this folder and start your agent tool. Claude Code 
 
 6. **Updating later.** Edit, commit, push. Pages redeploys automatically. Records are not affected: they live in the browser, not in the repo. If the page looks stale after a push, reload once (Pages caches files for up to 10 minutes).
 
+## Deploy on Vercel
+
+Live at **https://fields-attendance.vercel.app** (project `fields-attendance`, team `fields7`). `vercel.json` serves the repo root as a static site with no build; `.vercelignore` keeps `tests/`, `docs/` and `*.md` out.
+
+```bash
+export PATH=/usr/local/bin:$PATH   # this Mac: Homebrew's Node is broken, use Node 22 here
+npx vercel deploy --prod           # uploads the files on disk (committed or not)
+```
+
+The GitHub repo `starpick3miles/fields_teacher` is connected: a push to `main` deploys production, a push to another branch makes a preview. The command above is only needed to deploy without pushing. The Vercel address is a different origin from GitHub Pages: records saved at one are not visible at the other (move them with 백업 저장 → 백업 불러오기 → 합치기).
+
 ## Where the data lives and how not to lose it
 
 Records are stored in the browser's localStorage for this site's origin (`<username>.github.io`). They are erased if the teacher clears browsing data/site data, uses private browsing, or switches browser or device. Safari may also delete data for a site that has not been opened for 7 days when it is used as a normal tab (a Home Screen web app is exempt).
