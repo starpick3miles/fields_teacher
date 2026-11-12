@@ -1,0 +1,17 @@
+# Real records must never be committed: backups and exports contain students' names and attendance.
+*백업*.json
+*.xlsx
+
+# Tests
+tests/out/
+tests/vendor/
+__pycache__/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Claude Code local settings
+.claude/settings.local.json
