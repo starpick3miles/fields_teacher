@@ -23,7 +23,7 @@ S1 also has 엑셀 내보내기 and ⚙ 설정 (settings, backup, switch teacher
 - No classes that day → "이 날은 수업이 없어요" and a button to the next class day.
 
 ### S2 attendance
-- Tap cycles 미체크 → 온라인 → 지각 → 결석 → 미체크 (from 등원, a tap goes to 지각). Double tap (within ~320 ms) sets 등원. Long-press (~450 ms) opens a sheet with all states and a note; it is cancelled if the finger moves or the page scrolls, and the tap after it always registers.
+- Tap cycles 미체크 → 등원 → 온라인 → 지각 → 결석 → 미체크, as in the published app (no double tap since 2026-11-13). **전부 등원** under the cards, shown while anyone is 미체크, sets only 미체크 students to 등원 (not shown in 자리배치 출석 mode). Long-press (~450 ms) opens a sheet with all states and a note; it is cancelled if the finger moves or the page scrolls, and the tap after it always registers.
 - The date arrows step between this class's lessons (own days and partner days), not calendar days.
 - **Partner teacher's day** is view only, with a banner; its records are stored apart (`db.partnerAtt`).
 - **Expected attendance** (`TEACHERS[].expected`): attendance received before class is shown as the default until the teacher changes or confirms it. It is never written on its own; a teacher record always wins.
@@ -103,7 +103,7 @@ One entry per teacher in `js/teachers.js`. Adding a teacher is adding an entry; 
 - `expected`: `{date: {classId: {name: status, "*": rest}}}`.
 - Every 유7 class is 2시간 in the 수업일지.
 
-Current teachers: 정혜진 (jhj), 엄지은 (eje), 서지원 (sjw), 이재현 (ljh; most rosters still empty), 서지완 (sjn), 이동근 (ldg).
+Current teachers: 정혜진 (jhj), 엄지은 (eje), 서지원 (sjw), 이재현 (ljh; most rosters still empty), 서지완 (sjn), 이동근 (ldg), 정고은 (jge). The published app also has 고연경; not here yet.
 
 ## Excel export
 

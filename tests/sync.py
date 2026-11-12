@@ -11,7 +11,7 @@ from playwright.sync_api import sync_playwright
 HERE=os.path.dirname(os.path.abspath(__file__)); ROOT=os.path.dirname(HERE); sys.path.insert(0,HERE)
 from sync_server import make_server
 PORT=os.environ.get('PORT','8768'); BPORT=int(os.environ.get('BACKEND_PORT','8769'))
-web=subprocess.Popen([sys.executable,'-m','http.server',PORT,'-d',ROOT],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+web=subprocess.Popen([sys.executable,os.path.join(os.path.dirname(os.path.abspath(__file__)),'serve.py'),PORT,ROOT],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 backend,store=make_server(BPORT); time.sleep(1)
 URL='http://localhost:%s/'%PORT; BURL='http://127.0.0.1:%d'%BPORT
 CHROME=os.environ.get('CHROME_PATH'); out=os.path.join(HERE,'out'); os.makedirs(out,exist_ok=True)

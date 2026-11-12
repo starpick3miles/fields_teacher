@@ -97,7 +97,7 @@ function viewClass(){
   else h+='<div class="grid">'+r.map(function(s){
     var st=attStatus(d,c.id,s.id), nt=attNote(d,c.id,s.id), ex=isExpected(d,c.id,s.id);
     return '<button class="tile s-'+ATT_CLS[st]+(ex?' exp':'')+'" data-act="cycle" data-sid="'+s.id+'" aria-label="'+esc(s.name)+', '+t(st)+(ex?' ('+t("expTag")+')':'')+'"><span class="nm">'+esc(s.name)+'</span><span class="st">'+t(st)+(ex?' · '+t("expTag"):'')+'</span>'+(nt?'<span class="dot" aria-hidden="true"></span>':'')+'</button>';
-  }).join("")+'</div><p class="hint">'+t("noteHint")+'</p>';
+  }).join("")+'</div>'+(cnt.none?'<button class="btn block attall" data-act="attAll">✓ '+t("attAll")+' <span class="muted">· '+t("attAllN",{n:cnt.none})+'</span></button>':'')+'<p class="hint">'+t("noteHint")+'</p>';
 
   // 숙제 확인: one card per student — tap the card body to toggle 했어요 / 안 했어요, ✎ to write a comment
   var hr=r.filter(function(s){ return hwEligible(d,c.id,s.id); }), hwOut=r.length-hr.length;

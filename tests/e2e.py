@@ -11,7 +11,7 @@ from playwright.sync_api import sync_playwright
 HERE=os.path.dirname(os.path.abspath(__file__))
 ROOT=os.path.dirname(HERE)
 PORT=os.environ.get('PORT','8765')
-srv=subprocess.Popen([sys.executable,'-m','http.server',PORT,'-d',ROOT],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+srv=subprocess.Popen([sys.executable,os.path.join(os.path.dirname(os.path.abspath(__file__)),'serve.py'),PORT,ROOT],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 time.sleep(1)
 URL='http://localhost:%s/'%PORT
 # Offline runs: put the pinned build at tests/vendor/exceljs.min.js and it is served for the CDN URL
@@ -97,6 +97,18 @@ try:
     pg.evaluate('''()=>{const d=JSON.parse(localStorage.getItem("fields-attendance-v1")); d.attendance["2026-11-09_jhj-m3_s-김규원"]={status:"absent",note:"x",at:1}; localStorage.setItem("fields-attendance-v1",JSON.stringify(d));}''')
     pg2.wait_for_timeout(400)
     check('다른 탭' in pg2.inner_text('#toast'),'other tab reloads on change')
+    # name-card tap cycle (published app order), 전부 등원, and the 정고은 config
+    cyc=pg.evaluate('()=>{let s="none",o=[];for(let i=0;i<5;i++){s=CYCLE[s];o.push(s);}return o.join(">");}')
+    check(cyc=='present>online>late>absent>none','tap cycle 등원 → 온라인 → 지각 → 결석 → 미체크 (%s)'%cyc)
+    aa=pg.evaluate('''()=>{const c=myClasses()[0], d=stepLesson(c,addDays(todayIso(),7),1); state.view="class"; state.classId=c.id; state.date=d; render();
+      const r=rosterOf(db,c.id,d), before=r.filter(s=>attStatus(d,c.id,s.id)==="none").length, btn=document.querySelector('[data-act="attAll"]');
+      if(!btn) return {before:before,btn:false};
+      setAtt(r[0].id,"absent"); render(); document.querySelector('[data-act="attAll"]').click();
+      const st=r.map(s=>attStatus(d,c.id,s.id));
+      return {before:before,btn:true,first:st[0],rest:st.slice(1).every(x=>x==="present"),gone:!document.querySelector('[data-act="attAll"]')}; }''')
+    check(aa.get('btn') and aa['before']>1 and aa['first']=='absent' and aa['rest'] and aa['gone'],'전부 등원 marks only 미체크 students, keeps 결석, then hides %s'%aa)
+    jg=pg.evaluate('()=>{const t=TEACHERS.find(x=>x.id==="jge"); return t?[t.name,t.classes.length,db.classes.filter(c=>c.teacherId==="jge").length,t.classes.reduce((a,c)=>a+c.roster.length,0)]:null;}')
+    check(jg==['정고은',10,10,71],'정고은 seeded: 10 classes, 71 roster entries %s'%jg)
     # 골든벨 tie-break: equal points → the student marked first ranks higher; no times → shared rank (not saved)
     tb=pg.evaluate('''()=>{const ids=db.students.slice(0,4).map(s=>s.id), s={id:"tb-test",classId:"x",date:"2026-11-09",status:"active",playerIds:ids,joinedAt:{},questionCount:2,currentQ:2};
       db.gbQuestions["tb-test_1"]={phase:"closed"}; db.gbQuestions["tb-test_2"]={phase:"closed"};

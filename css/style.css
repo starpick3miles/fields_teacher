@@ -147,6 +147,7 @@ ul{list-style:none;margin:0;padding:0}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .qchip{min-height:36px;padding:4px 12px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);font-size:13px;font-weight:600}
 .btn.hwall{min-height:48px;font-size:16px}
+.btn.attall{min-height:48px;font-size:16px;margin-top:10px}
 .hwall{font-size:13px;font-weight:600;color:var(--accent);min-height:36px}
 .gbsec{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:16px}
 .sesslist{display:flex;flex-direction:column;gap:6px}

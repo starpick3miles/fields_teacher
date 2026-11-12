@@ -3,7 +3,9 @@
    (i18n → model → teachers → data → views → excel → app). Code that runs at load may only use earlier files. */
 
 /* ---------- actions (pure-ish rules) ---------- */
-var CYCLE={none:"online",online:"late",present:"late",late:"absent",absent:"none"};
+// Name-card tap cycle, same as the published app (v15): 미체크 → 등원 → 온라인 → 지각 → 결석 → 미체크. No double tap any more:
+// 등원 is the first tap, and a double-tap shortcut would swallow every second tap of a fast cycle.
+var CYCLE={none:"present",present:"online",online:"late",late:"absent",absent:"none"};
 function setAtt(sid,st,note){
   var k=akey(state.date,state.classId,sid), prev=db.attendance[k]||{};
   var n = note!=null ? note : (prev.note||"");
@@ -18,8 +20,6 @@ function startGb(){
   db.gbQuestions[qkey(id,1)]={phase:"first"};
   state.sessionId=id; state.q=1; state.view="gb"; persist();
 }
-var lastTap={sid:null,t:0};
-function isDouble(sid){ var now=Date.now(), d=(lastTap.sid===sid && now-lastTap.t<DOUBLE_MS); lastTap = d ? {sid:null,t:0} : {sid:sid,t:now}; return d; }
 var GB_CYCLE={"":"◎","◎":"O","O":"△","△":"X","X":""};
 function gbTap(sid){
   var s=db.gbSessions[state.sessionId], q=state.q, ph=db.gbQuestions[qkey(s.id,q)].phase;
@@ -86,7 +86,10 @@ app.addEventListener("click",function(ev){
       var allOn=live.length>0 && live.every(function(s){ return hwGet(state.date,state.classId,s.id).done; });
       live.forEach(function(s){ hwSet(state.date,state.classId,s.id,!allOn); }); save(); render(); break; }
     case "expConfirm": { rosterOf(db,state.classId,state.date).forEach(function(s){ if (isExpected(state.date,state.classId,s.id)) setAtt(s.id,attStatus(state.date,state.classId,s.id)); }); save(t("expDone")); render(); break; }
-    case "cycle": { var sid=el.getAttribute("data-sid"); if (isDouble(sid)) setAtt(sid,"present"); else setAtt(sid,CYCLE[attStatus(state.date,state.classId,sid)]); save(); render(); break; }
+    case "cycle": { var sid=el.getAttribute("data-sid"); setAtt(sid,CYCLE[attStatus(state.date,state.classId,sid)]); save(); render(); break; }
+    case "attAll": {   // 전부 등원: only 미체크 students; 온라인 / 지각 / 결석 / 예정 stay as they are
+      var nAll=0; rosterOf(db,state.classId,state.date).forEach(function(s0){ if (attStatus(state.date,state.classId,s0.id)==="none"){ setAtt(s0.id,"present"); nAll++; } });
+      if (nAll){ save(t("attAllDone",{n:nAll})); render(); } break; }
     case "markAll": rosterOf(db,state.classId,state.date).forEach(function(x){ if (attStatus(state.date,state.classId,x.id)==="none") setAtt(x.id,"present"); }); save(); render(); break;
     case "sheetAtt": { // choosing a state saves (with any typed note) and closes the sheet
       var ta=document.getElementById("noteInput");

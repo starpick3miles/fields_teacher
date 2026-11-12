@@ -2,6 +2,34 @@
 
 Newest first. Add an entry for every change: date, what, why, who asked. "Jay" = the owner. Entries before 2026-11-11 summarize work done in Claude artifacts and come from the project docs, so they are less detailed.
 
+## 2026-11-13 — 정고은 added; published tap cycle and 전부 등원 ported; test server fixed (Jay)
+
+Why: Jay asked to work through the to-do list (close the gap with the published app v15). Built by Claude Code.
+
+- **정고은 (`jge`)** added to `js/teachers.js`: 10 classes, 71 roster entries from the student list Jay pasted (school names left out). Days and times were read off the published app's screens: 월 초4-②E2-2 · 초3-②E1-8, 화 초2-②E2-5 · 초1-②H5, 수 초4-②G2 · 초1-②G15, 목 유7-②H7 · 초2-②E1-7, 금 초4-②G5 · 유7-②G11.
+  - Roles: 초4-②E2-2 = B and 초3-②E1-8 = A, taken from 엄지은's and 서지완's entries. 초2-②E2-5 (with 신혜정) and 초2-②E1-7 (with 오혜진) have no role tag and no A/B in the log code: **Jay to confirm who is 담임**.
+  - No 진도표 plan and no attendance history (the published app has some for her). **Class ids (`jge-m3` …) follow the day+slot convention but could not be checked against the published app**, whose source is not readable from here. If its ids differ, records imported from a published-app backup will not attach to these classes; check with a real 백업 저장 file before relying on 합치기 for her.
+- **Tap cycle** on the name cards is now the published one: 미체크 → 등원 → 온라인 → 지각 → 결석 → 미체크. The double-tap shortcut for 등원 is removed (Claude's call: with 등원 as the first tap it would swallow every second tap of a fast cycle).
+- **전부 등원** button under the name cards while anyone is 미체크: sets only 미체크 students to 등원; 온라인 / 지각 / 결석 / 예정 stay. Not shown in 자리배치 출석 mode (brief's open decision 4 is still Jay's).
+- **Tests:** `tests/serve.py` replaces `python3 -m http.server` in all three suites. The old server keeps a listen queue of 5 and sometimes reset one of the page's twelve parallel script requests; that script never ran and the test saw a blank page (about 1 load in 10). `tests/e2e.py` has three new checks (22 in all).
+- **Still missing against v15:** 고연경 (her roster is needed; switching teachers in the published app needs the PIN), 수업 메모, 숙제 항목 (연산교재 / 교과병행) with tags, and the hidden tag for same-name children. These need the published app's source or a backup file so the stored shapes match.
+- **Noticed, not fixed:** if one script fails to load on a bad connection the app stays blank with no message. Worth a small "다시 불러오기" fallback before the pilot.
+- Git: the uncommitted work from 11-12 and 11-13 was committed on branch `seat-att-sync` (not pushed). The GitHub repo is private and Pages is not enabled.
+
+## 2026-11-13 — Vercel hosting config added; not deployed yet (Jay)
+
+Why: Jay asked to "integrate vercel and set up web site". Built by Claude Code.
+
+- **`vercel.json`**: static site, no framework, no build or install command, served from the repo root. Every response carries `X-Robots-Tag: noindex, nofollow` (GitHub Pages could only do this with the meta tag and `robots.txt`), plus `nosniff` and `Referrer-Policy: no-referrer`. Vercel's default for static files is already "revalidate on every load", so a push shows up without the 10-minute Pages cache.
+- **`.vercelignore`**: `tests/`, `docs/`, `*.md`, `.claude/`, backups and `.xlsx` are not uploaded. Only `index.html`, `css/`, `js/`, `robots.txt` are served.
+- **`.gitignore`**: `.vercel` (the local project link).
+- No app code changed. `tests/e2e.py` passes (run with `/usr/local/bin/python3`, the Python that has Playwright).
+- **Not done:** nothing is deployed. Blocked on this Mac: Homebrew's Node 25.6.1 does not start (`libllhttp.9.3.dylib` missing after llhttp went to 9.4.3), so the Vercel CLI and `node --check` cannot run until Node is repaired (`brew upgrade node`), and Jay has to sign in to Vercel himself.
+- **To keep in mind when it goes live:**
+  - A `*.vercel.app` address is a new origin. Records saved at the GitHub Pages address or in the artifact stay there; move them with 백업 저장 → 백업 불러오기 → 합치기 (same as the artifact finding above), or by turning on shared storage.
+  - For Firebase, add the Vercel domain under Authentication → Settings → Authorized domains.
+  - The site is as public as the Pages one: `js/teachers.js` (children's names) is served to anyone with the link. Vercel's password protection is a paid feature.
+
 ## 2026-11-13 — Shared storage: records sync per record; Firebase adapter (Jay, handoff brief Task 2)
 
 Why: on 2026-11-12 a day of records seemed to vanish. They were in another page's browser storage (the app keeps records only where they were entered). Jay chose Firebase as the backend and "same as today" for who sees what (one academy store). Built by Claude Code.
@@ -161,7 +189,7 @@ For Jay to decide:
 1. **Privacy:** are public rosters acceptable for the pilot? If not, move rosters out of `js/teachers.js`.
 2. **Scoring:** confirm "−" = 1 point for both 미표시 and 미참가; confirm the cumulative rule (absences, minimum participation); decide how app points map to the S반 50-point 골든벨 score.
 3. **Firebase:** when shared data is needed (원장 view, 담임 + 부담임 average, more teachers). Frontend stack for a real app is still undecided in the spec (Flutter web or Next.js).
-4. 초1-G6 time (반명 says 화3, 진도표 says 화4); 박라엘's start date (assumed 11/10); 이재현's missing rosters.
+4. 초1-G6 time (반명 says 화3, 진도표 says 화4); 박라엘's start date (assumed 11/10); 이재현's missing rosters. 정고은: 담임 or 부담임 in 초2-②E2-5 and 초2-②E1-7; 고연경's roster.
 5. Confirm that the same roster name always means the same child.
 
 Engineering backlog:

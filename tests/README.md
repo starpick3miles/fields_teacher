@@ -27,4 +27,6 @@ python3 tests/seat_att.py
 python3 tests/sync.py
 ```
 
+All three start `tests/serve.py`, a static server with a larger connection queue than `python3 -m http.server` (that one sometimes reset one of the page's parallel script requests, which left a blank page and a flaky test).
+
 Downloads land in `tests/out/` (git-ignored). The test picks 정혜진 and the lesson on 2026-11-09, so it depends on that teacher's config in `js/teachers.js`.

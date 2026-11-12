@@ -12,7 +12,7 @@ from playwright.sync_api import sync_playwright
 HERE=os.path.dirname(os.path.abspath(__file__))
 ROOT=os.path.dirname(HERE)
 PORT=os.environ.get('PORT','8766')
-srv=subprocess.Popen([sys.executable,'-m','http.server',PORT,'-d',ROOT],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+srv=subprocess.Popen([sys.executable,os.path.join(os.path.dirname(os.path.abspath(__file__)),'serve.py'),PORT,ROOT],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 time.sleep(1)
 URL='http://localhost:%s/'%PORT
 VENDOR=os.path.join(HERE,'vendor','exceljs.min.js')

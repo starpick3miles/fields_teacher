@@ -68,7 +68,6 @@ var HW_QUICK=["책 안 가져옴","일부만 함","채점 안 함","오답 정�
 function attNote(d,c,s){ var r=db.attendance[akey(d,c,s)]; return r && r.note ? r.note : ""; }
 
 var PHASE_IDX={first:0,hint:1,closed:2};
-var DOUBLE_MS=320;
 function isPlayerStatus(st){ return st==="present"||st==="online"||st==="late"; }
 function markCls(m){ return (m==="◎"||m==="O")?"ok":m==="△"?"mid":m==="X"?"bad":"none"; }
 var ATT_CLS={present:"ok",online:"on",late:"mid",absent:"bad",none:"none"};
