@@ -27,6 +27,7 @@ js/views.js       UI state, toast, viewPick/Home/Class/Seat/Gb/Results, render()
 js/excel.js       Excel export: buildLogbook (공식 출석부, 수업일지 layout), buildWorkbook (기록 요약), runExport
 js/app.js         actions, the delegated click/change handlers, startup; loaded last
 tests/e2e.py      Playwright end-to-end check
+firestore.rules   Firestore security rules (firebase.json, .firebaserc); deploy: firebase deploy --only firestore:rules
 docs/             context and history
 ```
 

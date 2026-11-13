@@ -5,3 +5,6 @@ docs
 *.md
 *백업*.json
 *.xlsx
+firebase.json
+firestore.rules
+.firebaserc

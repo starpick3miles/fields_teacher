@@ -45,6 +45,7 @@ try:
   with sync_playwright() as pw:
     b=pw.chromium.launch(executable_path=CHROME,args=['--no-sandbox']) if CHROME else pw.chromium.launch()
     ctx=b.new_context(accept_downloads=True,viewport={'width':360,'height':800},timezone_id='America/New_York')
+    ctx.add_init_script('window.FIELDS_REMOTE=null;')   # local only: never write to the real Firebase project
     if EXCEL: ctx.route('https://cdn.jsdelivr.net/**',lambda r: r.fulfill(status=200,body=EXCEL,headers={'content-type':'application/javascript','access-control-allow-origin':'*'}))
     ctx.route('https://fonts.**',lambda r: r.fulfill(status=200,body=''))
     pg=ctx.new_page()

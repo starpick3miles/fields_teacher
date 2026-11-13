@@ -30,6 +30,7 @@ try:
   with sync_playwright() as p:
     b=p.chromium.launch(executable_path=CHROME,args=['--no-sandbox']) if CHROME else p.chromium.launch()
     ctx=b.new_context(accept_downloads=True,viewport={'width':420,'height':900})
+    ctx.add_init_script('window.FIELDS_REMOTE=null;')   # local only: never write to the real Firebase project
     # serve the pinned ExcelJS bytes for the CDN URL (sandbox has no internet); SRI still verifies them
     if EXCEL: ctx.route('https://cdn.jsdelivr.net/**',lambda r: r.fulfill(status=200,body=EXCEL,headers={'content-type':'application/javascript','access-control-allow-origin':'*'}))
     ctx.route('https://fonts.**',lambda r: r.fulfill(status=200,body=''))

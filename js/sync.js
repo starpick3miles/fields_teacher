@@ -41,7 +41,7 @@
   var OUT_KEY = "fields-sync-outbox", CUR_KEY = "fields-sync-cursor", IMP_KEY = "fields-sync-imported",
       DIRTY_KEY = "fields-sync-dirty", LAST_KEY = "fields-sync-last";
   var SKIP = { classes: 1, students: 1, enrollments: 1 };   // rebuilt from TEACHERS on every load
-  var DEBOUNCE_MS = 150, RETRY_MS = 5000, CHUNK = 400, PUSH_TIMEOUT_MS = 15000;
+  var DEBOUNCE_MS = 150, RETRY_MS = 5000, CHUNK = 400, ABSENT_CHUNK = 50, PUSH_TIMEOUT_MS = 15000;
 
   function parse(s) { try { return s ? JSON.parse(s) : null; } catch (e) { return null; } }
   function isObj(x) { return x !== null && typeof x === "object" && !Array.isArray(x); }
@@ -240,12 +240,21 @@
         for (i = 0; i < plain.length; i += CHUNK) (function (part) {
           var b = col.firestore.batch(); part.forEach(function (x) { b.set(ref(x.id), doc(x)); }); jobs.push(b.commit());
         })(plain.slice(i, i + CHUNK));
-        for (i = 0; i < absent.length; i += 200) (function (part) {   // create only where no document exists yet
-          jobs.push(col.firestore.runTransaction(function (tx) {
-            return Promise.all(part.map(function (x) { return tx.get(ref(x.id)); })).then(function (snaps) { snaps.forEach(function (s, k) { if (!s.exists) tx.set(ref(part[k].id), doc(part[k])); }); });
-          }));
-        })(absent.slice(i, i + 200));
-        return withTimeout(Promise.all(jobs), PUSH_TIMEOUT_MS);   // offline, the SDK would wait forever; the outbox retries instead
+        // offline, the SDK would wait forever; the outbox retries instead
+        return withTimeout(Promise.all(jobs), PUSH_TIMEOUT_MS).then(function () {
+          // Create only where no document exists yet. A transaction reads each document with its own request, so the groups go
+          // one after another: the first phone uploads ~2,500 seeded records, and all at once the browser refused them
+          // (ERR_INSUFFICIENT_RESOURCES, live check 2026-11-13). Records of a finished group stay uploaded if a later one fails.
+          var chain = Promise.resolve();
+          for (i = 0; i < absent.length; i += ABSENT_CHUNK) (function (part) {
+            chain = chain.then(function () {
+              return withTimeout(col.firestore.runTransaction(function (tx) {
+                return Promise.all(part.map(function (x) { return tx.get(ref(x.id)); })).then(function (snaps) { snaps.forEach(function (s, k) { if (!s.exists) tx.set(ref(part[k].id), doc(part[k])); }); });
+              }), PUSH_TIMEOUT_MS);
+            });
+          })(absent.slice(i, i + ABSENT_CHUNK));
+          return chain;
+        });
       });
     };
     this.watch = function (cb) {

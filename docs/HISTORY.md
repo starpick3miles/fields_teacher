@@ -2,6 +2,19 @@
 
 Newest first. Add an entry for every change: date, what, why, who asked. "Jay" = the owner. Entries before 2026-11-11 summarize work done in Claude artifacts and come from the project docs, so they are less detailed.
 
+## 2026-11-13 — Firebase connected: shared storage is on (Jay)
+
+Why: Jay asked "is firebase setup for this website?" (it was not: the adapter existed but `js/remote-config.js` was `null`), then "Yes, set it up". Built by Claude Code with the Firebase CLI; Jay signed in and did the console steps Google requires of the account owner.
+
+- **Project:** Firebase project **FieldsTeacher**, id `fieldsteacher-9b4e9`, owned by Jay's Google account (the one signed in to the Firebase CLI on this Mac). Jay created it in the console; Firestore `(default)` in `asia-northeast3` (Seoul); Firestore and Identity Toolkit APIs enabled; web app "Fields Attendance web" registered; Anonymous sign-in on; authorized domains `localhost`, `fields-attendance.vercel.app` (plus the two Firebase defaults). Free Spark plan, no billing.
+- **Leftover:** an empty Google Cloud project `fields-attendance` ("Fields Attendance") from the first attempt (Firebase could not be added to it before Jay accepted the Firebase terms). Unused; Jay can delete it (Google Cloud console → IAM & Admin → Settings → Shut down).
+- **`js/remote-config.js`** now holds the project's web config (not a secret). It keeps a value set before it loads, now including `null`, so a test can force local-only.
+- **`firestore.rules`** (+ `firebase.json`, `.firebaserc`), deployed: signed-in visitors may read `records/*`; writes must have exactly the record shape `js/sync.js` sends (`id`, `v` text < 200 KB, `d`, `t`, `u` = server time); deleting documents is not allowed (the app marks deletions with `d`). Not uploaded to Vercel (`.vercelignore`). Publish changes with `firebase deploy --only firestore:rules`.
+- **Fix in `js/sync.js`, found by the live check:** the first phone uploads the ~2,550 seeded records "only if absent", one read per record inside transactions; all transactions ran at once and the browser refused the requests (`ERR_INSUFFICIENT_RESOURCES`). The upload still finished, but the second phone then missed a live change. Those groups now run one after another, 50 records each (`ABSENT_CHUNK`), each with its own timeout.
+- **Tests:** `tests/e2e.py` and `tests/seat_att.py` set `window.FIELDS_REMOTE = null`, so they never write to the real project. e2e 22, seat_att 51, sync 34 pass. A live check against the real project (two fresh browsers on localhost) passed: the first upload drained, a tap on one browser showed on the other within seconds and back again, no console errors. It used only the date 2099-01-05 and left both marks at 미체크; the project now holds the seeded history and two cleared 2099 records.
+- **Exposure, as decided before:** anyone with the site link signs in anonymously and can read and write the records. Real per-teacher access needs a real sign-in (open item).
+- **Not done:** pushing to `main` (Vercel deploys from it) waits for Jay's OK. After the deploy, each teacher's phone uploads what it holds on first open; records from the artifact or the GitHub Pages address still need 백업 저장 → 백업 불러오기 → 합치기.
+
 ## 2026-11-13 — 정고은 added; published tap cycle and 전부 등원 ported; test server fixed (Jay)
 
 Why: Jay asked to work through the to-do list (close the gap with the published app v15). Built by Claude Code.

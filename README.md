@@ -82,18 +82,22 @@ curl -sL https://cdn.jsdelivr.net/npm/exceljs@<version>/dist/exceljs.min.js | op
 
 Put the result in `EXCELJS_SRI` as `sha384-<hash>`. If the hash is wrong, the export shows "엑셀 도구를 불러오지 못했어요".
 
-## Adding Firebase later
-
-`js/app.js` only uses `window.FieldsStorage` (`get`, `set`, `del`, `onRemoteChange`, `ready`). To share data across devices or teachers, write a Firebase adapter in `js/storage.js` with the same methods: keep localStorage as the instant local cache, push writes to Firestore in the background, and call the `onRemoteChange` callbacks from a Firestore `onSnapshot` listener. The app already reloads and re-renders when that callback fires (it uses the same hook today for changes made in another tab).
-
 ## Shared storage (Firebase)
 
 Without a backend the app keeps records in the browser only. To share them across phones, browsers and links, connect a Firebase project. The app loads the Firebase SDK from Google's CDN only when a backend is configured; there is still no build step.
 
+**Connected (2026-11-13):** project **FieldsTeacher** (`fieldsteacher-9b4e9`) on Jay's Google account, Firestore in `asia-northeast3` (Seoul), Anonymous sign-in on, authorized domains `localhost` and `fields-attendance.vercel.app`. The config is in `js/remote-config.js`. Console: https://console.firebase.google.com/project/fieldsteacher-9b4e9
+
+- The rules live in `firestore.rules` (with `firebase.json`, `.firebaserc`; none of them is deployed to the website). Change the file, then publish it: `firebase deploy --only firestore:rules` (Firebase CLI, signed in as the project owner).
+- The tests set `window.FIELDS_REMOTE = null`, so they never write to the real project. `tests/sync.py` uses its stand-in backend.
+- A new domain (another Vercel address, GitHub Pages) must be added under Authentication → Settings → Authorized domains, or sign-in fails there.
+
+The steps below are for setting up a project from scratch.
+
 1. [Firebase console](https://console.firebase.google.com) → **Add project** (Analytics is not needed).
 2. **Build → Firestore Database → Create database**. Location `asia-northeast3` (Seoul). Start in production mode.
-3. **Build → Authentication → Sign-in method → Anonymous → Enable**. Under **Settings → Authorized domains** add the site's domain (`<username>.github.io`).
-4. **Firestore → Rules**, publish:
+3. **Build → Authentication → Sign-in method → Anonymous → Enable**. Under **Settings → Authorized domains** add the site's domain (`fields-attendance.vercel.app`, or `<username>.github.io`).
+4. **Firestore → Rules**, publish `firestore.rules` from this repo (`firebase deploy --only firestore:rules`). The minimum is:
 
    ```
    rules_version = '2';
