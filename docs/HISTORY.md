@@ -2,6 +2,16 @@
 
 Newest first. Add an entry for every change: date, what, why, who asked. "Jay" = the owner. Entries before 2026-11-11 summarize work done in Claude artifacts and come from the project docs, so they are less detailed.
 
+## 2026-11-13 — 서현덕 added (Jay)
+
+Why: Jay pasted 서현덕's student list (반명 / 학생명 / 학교 / 담당, 103 rows) and asked to add him, push and update the Vercel deployment. Built by Claude Code.
+
+- **서현덕 (`shd`)** in `js/teachers.js`: 10 classes, 103 roster entries (school names left out). 월 초2-G15 · 초2-G13, 화 초1-H3 · 초1-H4, 수 초1-E2-7 · 초1-G11, 목 초1-E2-10 · 초1-E1-5, 금 초2-E1-2 · 초2-G14. Slot 3 = 15:00, 6 = 18:00, all 3시간.
+- **His day of each 2-day class** was worked out, not given: 이재현's entry (from the 진도표) has 초1-E1-5 on 화 and 초1-E2-7 on 금, both as A, so 서현덕 is **B on 목 and 수** (`sub:true`, log codes `초1-E1-5B`, `초1-E2-7B`). His list names him first for E2-7; the 진도표 was followed. 초1-E2-10(화목3) → 목, because 화3 is his 초1-H3; 초2-E1-2(수금3) → 금, because 수3 is his 초1-E2-7. **Jay to confirm** these two days and who is 담임 in 초1-E2-10 (with 이상화) and 초2-E1-2 (with 배재인); for now they have no role tag and no A/B in the log code.
+- **이재현's 초1-E2-7 roster** was empty ("명단 준비 중"); filled with the same 11 students. His 초1-E1-5 roster already matched the list.
+- `docs/APP.md` teacher list updated. No plan, no history, no 골든벨 samples.
+- Tests: e2e 22, seat_att 51, sync 34 pass; the app shows 서현덕 in the picker with his 10 classes on the right days and no page errors.
+
 ## 2026-11-13 — Firebase connected: shared storage is on (Jay)
 
 Why: Jay asked "is firebase setup for this website?" (it was not: the adapter existed but `js/remote-config.js` was `null`), then "Yes, set it up". Built by Claude Code with the Firebase CLI; Jay signed in and did the console steps Google requires of the account owner.

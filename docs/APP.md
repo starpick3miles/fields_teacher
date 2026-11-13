@@ -103,7 +103,7 @@ One entry per teacher in `js/teachers.js`. Adding a teacher is adding an entry; 
 - `expected`: `{date: {classId: {name: status, "*": rest}}}`.
 - Every 유7 class is 2시간 in the 수업일지.
 
-Current teachers: 정혜진 (jhj), 엄지은 (eje), 서지원 (sjw), 이재현 (ljh; most rosters still empty), 서지완 (sjn), 이동근 (ldg), 정고은 (jge). The published app also has 고연경; not here yet.
+Current teachers: 정혜진 (jhj), 엄지은 (eje), 서지원 (sjw), 이재현 (ljh; most rosters still empty), 서지완 (sjn), 이동근 (ldg), 정고은 (jge), 서현덕 (shd). The published app also has 고연경; not here yet.
 
 ## Excel export
 

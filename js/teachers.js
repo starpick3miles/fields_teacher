@@ -79,7 +79,7 @@ var TEACHERS=[
     expected:{}, planWeeks:["2026-11-02","2026-11-09","2026-11-16","2026-11-23"] },
   { id:"ljh", name:"이재현", defaults:{seating:true,hw:"one"}, sampleGb:false,
     // 이재현 (1관): classes, days, A/B roles, partners and weekly plans from the 대치 2611 진도표 (10 rows). Rosters not given yet
-    // (Jay, 2026-11-10) → empty rosters, except 초1-E1-5 (출석 체크 screenshot, 11/10 화6); the class shows "명단 준비 중" until they're added here. B days (7-E1-5B, 7-S2, 2-E1-4B) =
+    // (Jay, 2026-11-10) → empty rosters, except 초1-E1-5 (출석 체크 screenshot, 11/10 화6) and 초1-E2-7 (서현덕's list, 2026-11-13); the class shows "명단 준비 중" until they're added here. B days (7-E1-5B, 7-S2, 2-E1-4B) =
     // sub:true → no 골든벨, like 엄지은 / 서지원. 유7-S2 has no A/B in the 진도표; his plan is 필즈실력 (부교재) vs 이경주's 1-6 (더클래식) → B.
     // 반명 are built from the 진도표 (grade-level-num + both days + slot) and still need checking against the academy roster.
     classes:[
@@ -91,7 +91,7 @@ var TEACHERS=[
       {"id":"w6","name":"초4-H7(수6)","days":[3],"time":"18:00","roster":[],"log":{"code":"초4-H7","slot":"수6","hours":"3시간"},"plan":["3A2R 2호 활동3 중간 39-46\n(중학도형2 act 52)\n(11월 2주차부터 중학연산 2A 시작 공지)","3A2R 3호 활동1 중간 66\n(중학연산2A act 1-3)","3A2R 3호 활동2 끝 77\n(중학연산2A act 4-6)","3A2R 3호 도전 끝 86\n(중학연산2A act 7-9)"]},
       {"id":"h3","name":"초1-E1-3(화목3)","days":[4],"time":"15:00","role":"A","partnerDays":[2],"partner":"신솔미","roster":[],"log":{"code":"초1-E1-3A","slot":"목3","hours":"3시간"},"plan":["2G2 1호 끝 17-27\n더클셈 9권 5주차 70-81","2G2 2호 활동2 중간 53\n더클셈 9권 5주차 리뷰 82-84","2G2 3호 활동1 중간 75\n더클셈 9권 6주차 86-97\n(준비물 : 컴퍼스, 자)","2G2 3호 끝 86\n더클셈 9권 6주차 리뷰 98-100"]},
       {"id":"h6","name":"초1-E2-8(화목6)","days":[4],"time":"18:00","role":"A","partnerDays":[2],"partner":"박봉욱","roster":[],"log":{"code":"초1-E2-8A","slot":"목6","hours":"3시간"},"plan":["2G1 1호 활동3 끝 12-22\n더클셈 9권 5주차 70-81","2G1 2호 활동2 중간 50\n더클셈 9권 5주차 리뷰 82-84","2G1 3호 활동1 중간 72\n더클셈 9권 6주차 86-97","2G1 3호 활동2 중간 83\n더클셈 9권 6주차 리뷰 98-100\n(준비물 : 컴퍼스, 자)"]},
-      {"id":"f3","name":"초1-E2-7(수금3)","days":[5],"time":"15:00","role":"A","partnerDays":[3],"partner":"서현덕","roster":[],"log":{"code":"초1-E2-7A","slot":"금3","hours":"3시간"},"plan":["2G1 1호 활동3 끝 12-22\n더클셈 9권 5주차 70-81","2G1 2호 활동2 중간 50\n더클셈 9권 5주차 리뷰 82-84","2G1 3호 활동1 중간 72\n더클셈 9권 6주차 86-97","2G1 3호 활동2 중간 83\n더클셈 9권 6주차 리뷰 98-100\n(준비물 : 컴퍼스, 자)"]},
+      {"id":"f3","name":"초1-E2-7(수금3)","days":[5],"time":"15:00","role":"A","partnerDays":[3],"partner":"서현덕","roster":["강은율","고은찬","남재이","도은우","류채아","성보검","이준2","이지호","임예준","정서후","정시현"],"log":{"code":"초1-E2-7A","slot":"금3","hours":"3시간"},"plan":["2G1 1호 활동3 끝 12-22\n더클셈 9권 5주차 70-81","2G1 2호 활동2 중간 50\n더클셈 9권 5주차 리뷰 82-84","2G1 3호 활동1 중간 72\n더클셈 9권 6주차 86-97","2G1 3호 활동2 중간 83\n더클셈 9권 6주차 리뷰 98-100\n(준비물 : 컴퍼스, 자)"]},
       {"id":"f6","name":"초4-G11(금6)","days":[5],"time":"18:00","roster":[],"log":{"code":"초4-G11","slot":"금6","hours":"3시간"},"plan":["3G3R 3호 활동2 중간 68-77\n(중학도형2 act 52)\n(11월 2주차부터 중학연산 2A 시작 공지)","3G3R 3호 활동3 끝 88\n(중학연산2A act 1-3)","3G3R 4호 활동1 중간 108\n(중학연산2A act 4-6)\n(12월 1주차 3A2R TEST 공지)","3G3R 4호 도전 끝 118\n(중학연산2A act 7-9)\n(12월 1주차 3A2R TEST 재공지)"]}
     ],
     extraEnroll:[], realAtt:{}, partnerAtt:{}, expected:{}, planWeeks:["2026-11-02","2026-11-09","2026-11-16","2026-11-23"] },
@@ -150,6 +150,25 @@ var TEACHERS=[
       {"id": "h6", "name": "초2-②E1-7(화목6)", "days": [4], "time": "18:00", "partnerDays": [2], "partner": "오혜진", "roster": ["권태준", "김수하", "김준우2", "방율", "선소윤", "이하온", "정시윤", "조윤우", "차유호", "한서윤", "한재이"], "log": {"code": "초2-②E1-7", "slot": "목6", "hours": "3시간"}},
       {"id": "f3", "name": "초4-②G5(금3)", "days": [5], "time": "15:00", "roster": ["강민재", "김서율2", "문예서", "신시아"], "log": {"code": "초4-②G5", "slot": "금3", "hours": "3시간"}},
       {"id": "f6", "name": "유7-②G11(금6)", "days": [5], "time": "18:00", "roster": ["김도윤C", "김지아3", "도윤우", "소하진", "양태희", "오나은", "우준원", "최준서"], "log": {"code": "유7-②G11", "slot": "금6", "hours": "2시간"}}
+    ],
+    extraEnroll:[], realAtt:{}, partnerAtt:{}, expected:{}, planWeeks:[] },
+  { id:"shd", name:"서현덕", defaults:{seating:true,hw:"one"}, sampleGb:false,
+    // 서현덕: rosters from his student list (반명 / 학생명 / 담당, 103 rows, Jay 2026-11-13); school names left out. Days and slots from
+    // the 반명 (3 = 15:00, 6 = 18:00). His day of each 2-day class: 초1-E1-5 목 and 초1-E2-7 수 (이재현's entry has 화 and 금, both A, from
+    // the 진도표 → he is B there, although his list names him first for E2-7); 초1-E2-10 목 (화3 is his 초1-H3) and 초2-E1-2 금 (수3 is
+    // his 초1-E2-7). 초1-E2-10 (with 이상화) and 초2-E1-2 (with 배재인): role unknown, so no tag and no A/B in the log code.
+    // No 진도표 plan and no attendance history yet. Class ids follow the day+slot convention.
+    classes:[
+      {"id": "m3", "name": "초2-G15(월3)", "days": [1], "time": "15:00", "roster": ["강서정", "권근형", "김원준", "김태인", "박지온", "유하윤", "장은채", "정다윤", "정은우", "홍서하", "홍재현"], "log": {"code": "초2-G15", "slot": "월3", "hours": "3시간"}},
+      {"id": "m6", "name": "초2-G13(월6)", "days": [1], "time": "18:00", "roster": ["권재인", "김범", "김유환", "김주원6", "김지운", "노하영", "문나린", "박가율", "송시우", "위동규", "이선빈"], "log": {"code": "초2-G13", "slot": "월6", "hours": "3시간"}},
+      {"id": "t3", "name": "초1-H3(화3)", "days": [2], "time": "15:00", "roster": ["강나연", "국지윤(신)", "박이현", "박주호2", "손이준", "은하은"], "log": {"code": "초1-H3", "slot": "화3", "hours": "3시간"}},
+      {"id": "t6", "name": "초1-H4(화6)", "days": [2], "time": "18:00", "roster": ["강호겸", "김나은B", "김루인", "김제니", "박승빈", "서민재", "이재이"], "log": {"code": "초1-H4", "slot": "화6", "hours": "3시간"}},
+      {"id": "w3", "name": "초1-E2-7(수금3)", "days": [3], "time": "15:00", "role": "B", "sub": true, "partnerDays": [5], "partner": "이재현", "roster": ["강은율", "고은찬", "남재이", "도은우", "류채아", "성보검", "이준2", "이지호", "임예준", "정서후", "정시현"], "log": {"code": "초1-E2-7B", "slot": "수3", "hours": "3시간"}},
+      {"id": "w6", "name": "초1-G11(수6)", "days": [3], "time": "18:00", "roster": ["김결", "김시헌", "남서원", "민하은", "박서준5", "박서진", "윤동건", "이성민(신)", "이세온", "이수호", "이태윤"], "log": {"code": "초1-G11", "slot": "수6", "hours": "3시간"}},
+      {"id": "h3", "name": "초1-E2-10(화목3)", "days": [4], "time": "15:00", "partnerDays": [2], "partner": "이상화", "roster": ["나유원", "소경준", "송민준", "신채아", "이시헌", "이윤성", "장하원", "정우진3", "최지우3", "홍민지", "홍윤재"], "log": {"code": "초1-E2-10", "slot": "목3", "hours": "3시간"}},
+      {"id": "h6", "name": "초1-E1-5(화목6)", "days": [4], "time": "18:00", "role": "B", "sub": true, "partnerDays": [2], "partner": "이재현", "roster": ["강민성", "김리나", "김재원3", "김지원2", "류준교", "손한규", "오윤담", "이재이3", "이종원", "임태오2", "한준석"], "log": {"code": "초1-E1-5B", "slot": "목6", "hours": "3시간"}},
+      {"id": "f3", "name": "초2-E1-2(수금3)", "days": [5], "time": "15:00", "partnerDays": [3], "partner": "배재인", "roster": ["권이준", "김의찬", "김태라", "박서완", "박선우2", "심규보", "오화준", "이윤우", "이제인", "이준기", "이지호1", "이현규"], "log": {"code": "초2-E1-2", "slot": "금3", "hours": "3시간"}},
+      {"id": "f6", "name": "초2-G14(금6)", "days": [5], "time": "18:00", "roster": ["김이삭", "박세령", "박준서3", "신하영", "오경필", "윤서진", "이승재", "장예나", "전시아", "조은유", "최서아2", "한예원"], "log": {"code": "초2-G14", "slot": "금6", "hours": "3시간"}}
     ],
     extraEnroll:[], realAtt:{}, partnerAtt:{}, expected:{}, planWeeks:[] }
 ];
