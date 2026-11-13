@@ -2,6 +2,15 @@
 
 Newest first. Add an entry for every change: date, what, why, who asked. "Jay" = the owner. Entries before 2026-11-11 summarize work done in Claude artifacts and come from the project docs, so they are less detailed.
 
+## 2026-11-13 — 서현덕 corrected from the 대치 2611 진도표 (Jay)
+
+Why: after the entry below, Jay said "actually refer to" `2611 대치 주간진도표.xlsx`. Built by Claude Code.
+
+- The 진도표 lists 서현덕 as **B in all four 2-day classes**: 1-E1-5B 목6, 1-E2-10B 목3, 1-E2-7B 수3, 2-E1-2B 금3. The days were already right; 초1-E2-10 and 초2-E1-2 now also carry `role:"B"`, `sub:true` and log codes `초1-E2-10B`, `초2-E1-2B`.
+- **Weekly plans (진도표) added** for all 10 classes, weeks of 11/2, 11/9, 11/16, 11/23 (`planWeeks`): B classes take the B row of their group (초1 E1: 필즈초급(상) 6–9호; 초1 E2: 필즈초급(상) 2–5호; 초2 E1: 6대수 3–6호); G/H classes take the group's 작성자 row, which he writes (초1-G 1-9R/1-10R, 초1-H 1-9P, 초2-G 2G3R).
+- The workbook was read with a small stdlib XML reader (no openpyxl on this Mac); it was not copied into the repo.
+- Tests: e2e 22, seat_att 51, sync 34 pass.
+
 ## 2026-11-13 — 서현덕 added (Jay)
 
 Why: Jay pasted 서현덕's student list (반명 / 학생명 / 학교 / 담당, 103 rows) and asked to add him, push and update the Vercel deployment. Built by Claude Code.
